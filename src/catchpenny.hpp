@@ -1,0 +1,4 @@
+class Catchpenny {
+private:
+  DeviceContainer
+};
