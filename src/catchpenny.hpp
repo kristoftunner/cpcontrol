@@ -1,4 +1,15 @@
+#ifndef CATCHPENNY_HPP
+#define CATCHPENNY_HPP
+
+/**
+ * @brief class for controlling the catchpenny with the following functions:
+ *  - UpdatePower()
+ *  - ReadMeasurements()
+ *  - GetConfig() 
+ * 
+ */
 class Catchpenny {
-private:
-  DeviceContainer
+public:
+
 };
+#endif //CATCHPENNY_HPP
