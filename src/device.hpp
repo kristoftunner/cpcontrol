@@ -29,6 +29,14 @@ public:
   virtual int ReadMeasurements() override;
 };
 
+class SchneiderPM5110Meter : public BaseDevice
+{
+public:
+  SchneiderPM5110Meter(){};
+  virtual int Initialize(std::map<std::string,std::string> config) override;
+  virtual int ReadMeasurements() override;
+};
+
 class InverterDevice : public BaseDevice {
 public:
   InverterDevice(){
