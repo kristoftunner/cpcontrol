@@ -3,7 +3,10 @@
 #include <vector>
 #include <map>
 
+#include "json.hpp"
 #include "device.hpp"
+
+using json = nlohmann::json;
 
 enum class EnermanReturnCode{
   ENERMAN_OK,
@@ -14,7 +17,7 @@ class Enerman {
 private:
   DeviceContainer m_deviceContainer;
 public:
-  EnermanReturnCode BuildDevices(std::vector<std::map<std::string,std::string>> deviceDict);
+  EnermanReturnCode BuildDevices(json devicesConfig);
   EnermanReturnCode Execute();
 };
 

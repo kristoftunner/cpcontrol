@@ -1,6 +1,6 @@
 #include "enerman.hpp"
 
-EnermanReturnCode Enerman::BuildDevices(std::vector<std::map<std::string,std::string>> deviceDict)
+EnermanReturnCode Enerman::BuildDevices(json devicesConfig)
 {
   for(auto deviceConfigMap : deviceDict)
   {
@@ -8,7 +8,7 @@ EnermanReturnCode Enerman::BuildDevices(std::vector<std::map<std::string,std::st
     std::string type = deviceConfigMap.at("type");
     if(type == "meter")
     {
-      MeterDevice *device = new MeterDevice();
+      PowerMeterDevice *device = new PowerMeterDevice();
       if(device->Initialize(deviceConfigMap) == 0)
         m_deviceContainer.AppendDevice(device);
       else
