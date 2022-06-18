@@ -16,6 +16,7 @@ enum class EnermanReturnCode{
 class Enerman {
 private:
   DeviceContainer m_deviceContainer;
+  std::map<std::string, std::shared_ptr<ModbusPort>> m_modbusCommPortMap;
 public:
   EnermanReturnCode BuildDevices(json devicesConfig);
   EnermanReturnCode Execute();

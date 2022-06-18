@@ -12,8 +12,7 @@ class ModbusPort {
 private:
   Modbus::Master m_modbus;
 public:
-  ModbusPort(){}
-  bool Initialize(json& jsonInput);
+  ModbusPort(json& jsonInput);
   
   template<class T>
   std::vector<T> ReadHoldingRegister(int baseAddress, int number);

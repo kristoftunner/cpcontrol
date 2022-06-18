@@ -25,7 +25,7 @@ int DeviceContainer::ForEachDevice()
 
 int SchneiderPM5110Meter::Initialize(json config) 
 {
-  
+   
 }
 
 int SchneiderPM5110Meter::ReadMeasurements()
