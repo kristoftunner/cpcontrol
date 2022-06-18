@@ -5,28 +5,30 @@
     {
     "name" : "modbusRtu1",
     "mode" : "rtu",
-    "connection": "/dev/ttyS1",
+    "port": "/dev/ttyS1",
     "settings": "38400E1",
     "debug": true,
-    "response-timeout": 500,
-    "byte-timeout": 500,
-    "rtu": {
-      "mode": "rs485",
-      "rts": "down"
-      }
+    "responseTimeout": 500,
+    "byteTimeout": 500,
+    "serialMode": "rs485",
+    "rts": "down"
     },
     {
-      "name" : "modbusTcp1",
-      "mode" : "tcp",
-      "connection" : "127.0.0.1",
-      "settings" : "5002"
-    }
+    "name" : "modbustcp1",
+    "mode": "tcp",
+    "connection": "localhost",
+    "port": "1502",
+    "recovery-link": true,
+    "debug": true,
+    "response-timeout": 500,
+    "byte-timeout": 500
+  }
   ],
   "powerMeters" : [{
     "address" : 2,
     "interfacePort" : "modbusRTU1",
     "manufacturer" : "schneider",
-    "model" : "a9mem3255"
+    "model" : "schneidrPM5110"
   },
   {
     "address" : 1,

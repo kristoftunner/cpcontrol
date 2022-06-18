@@ -3,31 +3,51 @@
 EnermanReturnCode Enerman::BuildDevices(json devicesConfig)
 {
   /* build the communication ports for the devices */
-  for(auto commPort : devicesConfig.at("commPorts"))
+  if(devicesConfig.contains("commPorts"))
   {
-    auto name = commPort.at("name").get<std::string>();
-    m_modbusCommPortMap[name] = std::make_shared<ModbusPort>(ModbusPort(commPort));
+    for(auto commPort : devicesConfig.at("commPorts"))
+    {
+      auto name = commPort.at("name").get<std::string>();
+      std::shared_ptr<ModbusPort> portInstance = std::make_shared<ModbusPort>();
+      portInstance->Initialize(commPort);
+      m_modbusCommPortMap[name] = portInstance;
+    }
   }
 
   /* build the device -> append to the container */
-  for(auto powerMeter : devicesConfig.at("powerMeters"))
+  if(devicesConfig.contains("powerMeters"))
   {
-    auto commPortName = powerMeter.at("interfacePort").get<std::string>();
-    PowerMeterDevice *device = new PowerMeterDevice(m_modbusCommPortMap.at(commPortName));
-    if(device->Initialize(powerMeter) == 0)
-      m_deviceContainer.AppendDevice(device);
-    else
-      return EnermanReturnCode::ENERMAN_CONFIG_ERR;
+    for(auto powerMeter : devicesConfig.at("powerMeters"))
+    {
+      if(powerMeter.at("model") == "schneiderPM5110")
+      {
+        SchneiderPM5110Meter *device = new SchneiderPM5110Meter();
+        auto commPort = powerMeter.at("interfacePort");
+        device->SetCommPort(m_modbusCommPortMap[commPort]);
+        if(device->Initialize(powerMeter) == 0)
+        {
+          PowerMeterDevice *pmDevice = device;
+          m_deviceContainer.AppendDevice(pmDevice);
+        }
+        else
+          return EnermanReturnCode::ENERMAN_CONFIG_ERR;
+      }
+      else
+        return EnermanReturnCode::ENERMAN_CONFIG_ERR;
+    }
   }
 
-  for(auto inverter : devicesConfig.at("inverters"))
+  if(devicesConfig.contains("inverters"))
   {
-    auto commPortName = inverter.at("interfacePort").get<std::string>();
-    InverterDevice *device = new InverterDevice(m_modbusCommPortMap.at(commPortName));
-    if(device->Initialize(inverter) == 0)
-      m_deviceContainer.AppendDevice(device);
-    else
-      return EnermanReturnCode::ENERMAN_CONFIG_ERR;
+    for(auto inverter : devicesConfig.at("inverters"))
+    {
+      auto commPortName = inverter.at("interfacePort").get<std::string>();
+      InverterDevice *device = new InverterDevice(m_modbusCommPortMap.at(commPortName));
+      if(device->Initialize(inverter) == 0)
+        m_deviceContainer.AppendDevice(device);
+      else
+        return EnermanReturnCode::ENERMAN_CONFIG_ERR;
+    }
   }
 
   return EnermanReturnCode::ENERMAN_OK;
@@ -35,5 +55,8 @@ EnermanReturnCode Enerman::BuildDevices(json devicesConfig)
 
 EnermanReturnCode Enerman::Execute()
 {
-
+  if(m_deviceContainer.ReadMeasurements() == 0)
+    return EnermanReturnCode::ENERMAN_OK;
+  else
+    return EnermanReturnCode::ENERMAN_READ_ERR;
 }

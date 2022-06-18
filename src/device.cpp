@@ -23,9 +23,9 @@ int DeviceContainer::ForEachDevice()
 }
 
 
-int SchneiderPM5110Meter::Initialize(json config) 
+int SchneiderPM5110Meter::Initialize(json& config) 
 {
-   
+  m_address = config.at("address").get<int>();
 }
 
 int SchneiderPM5110Meter::ReadMeasurements()

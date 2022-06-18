@@ -12,15 +12,17 @@ class ModbusPort {
 private:
   Modbus::Master m_modbus;
 public:
-  ModbusPort(json& jsonInput);
+  ModbusPort(){}
+  bool Initialize(json& jsonInput);
+  void AddSlave(int address);
   
   template<class T>
-  std::vector<T> ReadHoldingRegister(int baseAddress, int number);
+  std::vector<T> ReadHoldingRegister(int baseAddress, int number, int slaveAddress);
   
   template<class T>
-  bool WriteHoldingRegister(int baseAddress, std::vector<T> values);
+  bool WriteHoldingRegister(int baseAddress, std::vector<T> values, int slaveAddress);
 
-  bool WriteSingleRegister(int baseAddress, uint16_t value);
+  bool WriteSingleRegister(int baseAddress, uint16_t value, int slaveAddress);
 };
 
 #endif //DEVICE_COMM_HPP

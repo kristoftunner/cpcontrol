@@ -10,7 +10,8 @@ using json = nlohmann::json;
 
 enum class EnermanReturnCode{
   ENERMAN_OK,
-  ENERMAN_CONFIG_ERR
+  ENERMAN_CONFIG_ERR,
+  ENERMAN_READ_ERR
 };
 
 class Enerman {

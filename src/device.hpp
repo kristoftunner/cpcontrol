@@ -153,11 +153,14 @@ private:
   const uint32_t frequencyReg = 3110;
 
   std::shared_ptr<ModbusPort> m_commPort;
+  int m_address;
 public:
-  SchneiderPM5110Meter(std::shared_ptr<ModbusPort> commPort) : m_commPort(commPort){};
-  virtual int Initialize(json config) override;
+  SchneiderPM5110Meter(){m_type = Devicetype::powerMeter};
+  virtual int Initialize(json& config) override;
   virtual int ReadMeasurements() override;
   virtual PowerMeterData GetPowerMeterData() {return m_data;}
+
+  void SetCommPort(sdt::shared_ptr<ModbusPort> commPort) : m_commPort(commPort){}
 };
 
 class InverterDevice : public BaseDevice {
