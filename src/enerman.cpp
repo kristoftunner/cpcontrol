@@ -42,7 +42,7 @@ EnermanReturnCode Enerman::BuildDevices(json devicesConfig)
     for(auto inverter : devicesConfig.at("inverters"))
     {
       auto commPortName = inverter.at("interfacePort").get<std::string>();
-      InverterDevice *device = new InverterDevice(m_modbusCommPortMap.at(commPortName));
+      InverterDevice *device = new InverterDevice();
       if(device->Initialize(inverter) == 0)
         m_deviceContainer.AppendDevice(device);
       else
@@ -55,7 +55,7 @@ EnermanReturnCode Enerman::BuildDevices(json devicesConfig)
 
 EnermanReturnCode Enerman::Execute()
 {
-  if(m_deviceContainer.ReadMeasurements() == 0)
+  if(m_deviceContainer.ReadMeasurements<PowerMeterDevice>() == 0)
     return EnermanReturnCode::ENERMAN_OK;
   else
     return EnermanReturnCode::ENERMAN_READ_ERR;

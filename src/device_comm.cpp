@@ -13,22 +13,22 @@ bool ModbusPort::Initialize(json& jsonInput)
   {
     auto port = jsonInput.at("port").get<std::string>();
     auto settings = jsonInput.at("settings").get<std::string>();
-    m_modbus = Modbus::Master(Modbus::Rtu, port, settings);
+    m_modbus = std::make_unique<Modbus::Master>(Modbus::Rtu, port, settings);
     
     auto serialMode = jsonInput.at("serialMode").at("mode").get<Modbus::SerialMode>();
     auto rts = jsonInput.at("rts").get<Modbus::SerialRts>();
-    m_modbus.rtu().setRts(rts);
-    m_modbus.rtu().setSerialMode(serialMode);
+    m_modbus->rtu().setRts(rts);
+    m_modbus->rtu().setSerialMode(serialMode);
 
     if(jsonInput.contains("responseTimout"))
     {
       auto responseTimeout = jsonInput.at("responseTimout").get<double>();
-      m_modbus.setResponseTimeout(responseTimeout);
+      m_modbus->setResponseTimeout(responseTimeout);
     }
     if(jsonInput.contains("byteTimeout"))
     {
       auto byteTimeout = jsonInput.at("byteTimout").get<double>();
-      m_modbus.setByteTimeout(byteTimeout);
+      m_modbus->setByteTimeout(byteTimeout);
     }
 
     return true;
@@ -37,17 +37,17 @@ bool ModbusPort::Initialize(json& jsonInput)
   {
     auto port = jsonInput.at("port").get<std::string>();
     auto connection = jsonInput.at("connection").get<std::string>();
-    m_modbus = Modbus::Master(Modbus::Tcp, connection, port);
+    m_modbus = std::make_unique<Modbus::Master>(Modbus::Tcp, connection, port);
     
     if(jsonInput.contains("responseTimout"))
     {
       auto responseTimeout = jsonInput.at("responseTimout").get<double>();
-      m_modbus.setResponseTimeout(responseTimeout);
+      m_modbus->setResponseTimeout(responseTimeout);
     }
     if(jsonInput.contains("byteTimeout"))
     {
       auto byteTimeout = jsonInput.at("byteTimout").get<double>();
-      m_modbus.setByteTimeout(byteTimeout);
+      m_modbus->setByteTimeout(byteTimeout);
     }
 
     return true;
@@ -56,22 +56,22 @@ bool ModbusPort::Initialize(json& jsonInput)
     return false;
 }
 
-void AddSlave(int address)
+void ModbusPort::AddSlave(int address)
 {
   /* right now this only works for RS485 slaves, TODO: support for modbustcp */
-  m_modbus.addSlave(address);
+  m_modbus->addSlave(address);
 }
 
 template<class T>
-std::vector<T> ReadHoldingRegister(int baseAddress, int number, int slaveAddres)
+std::vector<T> ModbusPort::ReadHoldingRegister(int baseAddress, int number, int slaveAddres)
 {
   /* TODO: do some error handling */
   std::vector<T> result;
-  if(m_modbus.open())
+  if(m_modbus->open())
   {
     std::vector<Modbus::Data<T, Modbus::EndianBigLittle>> data;
     data.resize(number);
-    Modbus::Slave& slv = m_modbus.slave()[slaveAddres];
+    Modbus::Slave& slv = m_modbus->slave(slaveAddres);
 
     if(slv.readRegisters(baseAddress, data.data(), number))
     {
@@ -88,15 +88,15 @@ std::vector<T> ReadHoldingRegister(int baseAddress, int number, int slaveAddres)
 }
 
 template<class T>
-bool WriteHoldingRegister(int baseAddress, std::vector<T> values, int slaveAddress)
+bool ModbusPort::WriteHoldingRegister(int baseAddress, std::vector<T> values, int slaveAddress)
 {
-  if(m_modbus.open())
+  if(m_modbus->open())
   {
-    std::vector<Data<T, Modbus::EndianBigLittle>> data;
-    Modbus::Slave& slv = m_modbus.slave()[slaveAddress];
+    std::vector<Modbus::Data<T, Modbus::EndianBigLittle>> data;
+    Modbus::Slave& slv = m_modbus->slave(slaveAddress);
     for(auto value : values)
     {
-      Data<T, Modbus::EndianBigLittle> tempData = value;
+      Modbus::Data<T, Modbus::EndianBigLittle> tempData = value;
       data.push_back(tempData);
     }
     slv.writeRegisters(baseAddress, data.data(), data.size());
@@ -106,11 +106,11 @@ bool WriteHoldingRegister(int baseAddress, std::vector<T> values, int slaveAddre
     return false;
 }
 
-bool WriteSingleRegister(int baseAddress, uint16_t value, int slaveAddres)
+bool ModbusPort::WriteSingleRegister(int baseAddress, uint16_t value, int slaveAddress)
 {
-  if(m_modbus.open())
+  if(m_modbus->open())
   {
-    Modbus::Slave& slv = m_modbus.slave()[slaveAddress];
+    Modbus::Slave& slv = m_modbus->slave(slaveAddress);
     slv.writeRegister(baseAddress, value);
     return true;
   }

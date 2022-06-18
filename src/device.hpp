@@ -123,7 +123,7 @@ protected:
   PowerMeterData m_data;
 public:
   PowerMeterDevice() {m_type = Devicetype::powerMeter;}
-  virtual int Initialize(json config) {};
+  virtual int Initialize(json& config) {};
   virtual int ReadMeasurements();
   virtual PowerMeterData GetPowerMeterData() {};
 };
@@ -138,10 +138,10 @@ private:
   const uint32_t voltagePhase1Reg = 3028;
   const uint32_t voltagePhase2Reg = 3030;
   const uint32_t voltagePhase3Reg = 3032;
-  const uint32_t powerAcTotalReg  = 3060;
   const uint32_t powerAcPhase1Reg = 3054;
   const uint32_t powerAcPhase2Reg = 3056;
   const uint32_t powerAcPhase3Reg = 3058;
+  const uint32_t powerAcTotalReg  = 3060;
   const uint32_t powerReactivePhase1Reg = 3062;
   const uint32_t powerReactivePhase2Reg = 3064;
   const uint32_t powerReactivePhase3Reg = 3066;
@@ -155,12 +155,12 @@ private:
   std::shared_ptr<ModbusPort> m_commPort;
   int m_address;
 public:
-  SchneiderPM5110Meter(){m_type = Devicetype::powerMeter};
+  SchneiderPM5110Meter(){m_type = Devicetype::powerMeter;}
   virtual int Initialize(json& config) override;
   virtual int ReadMeasurements() override;
   virtual PowerMeterData GetPowerMeterData() {return m_data;}
 
-  void SetCommPort(sdt::shared_ptr<ModbusPort> commPort) : m_commPort(commPort){}
+  void SetCommPort(std::shared_ptr<ModbusPort> commPort) {m_commPort = commPort;}
 };
 
 class InverterDevice : public BaseDevice {

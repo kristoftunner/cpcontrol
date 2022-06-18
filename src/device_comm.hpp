@@ -10,7 +10,7 @@ using json = nlohmann::json;
 
 class ModbusPort {
 private:
-  Modbus::Master m_modbus;
+  std::unique_ptr<Modbus::Master> m_modbus;
 public:
   ModbusPort(){}
   bool Initialize(json& jsonInput);
