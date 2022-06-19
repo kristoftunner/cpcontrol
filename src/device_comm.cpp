@@ -15,19 +15,37 @@ bool ModbusPort::Initialize(json& jsonInput)
     auto settings = jsonInput.at("settings").get<std::string>();
     m_modbus = std::make_unique<Modbus::Master>(Modbus::Rtu, port, settings);
     
-    auto serialMode = jsonInput.at("serialMode").at("mode").get<Modbus::SerialMode>();
-    auto rts = jsonInput.at("rts").get<Modbus::SerialRts>();
-    m_modbus->rtu().setRts(rts);
-    m_modbus->rtu().setSerialMode(serialMode);
+    auto serialMode = jsonInput.at("serialMode").get<std::string>();
+    Modbus::SerialMode serialModeconfig;    
+    if(serialMode == "rs232")
+      serialModeconfig = Modbus::Rs232;
+    else if(serialMode == "rs485")
+      serialModeconfig = Modbus::Rs485;
+    else
+      return false;
+    
+    auto rts = jsonInput.at("rts").get<std::string>();
+    Modbus::SerialRts rtsConfig;
+    if(rts == "rtsNone")
+      rtsConfig = Modbus::RtsNone;
+    else if(rts =="rtsUp")
+      rtsConfig = Modbus::RtsUp;
+    else if(rts == "rtsDown")
+      rtsConfig = Modbus::RtsDown;
+    else 
+      return false;
+    
+    m_modbus->rtu().setRts(rtsConfig);
+    m_modbus->rtu().setSerialMode(serialModeconfig);
 
-    if(jsonInput.contains("responseTimout"))
+    if(jsonInput.contains("responseTimeout"))
     {
-      auto responseTimeout = jsonInput.at("responseTimout").get<double>();
+      auto responseTimeout = jsonInput.at("responseTimeout").get<int>();
       m_modbus->setResponseTimeout(responseTimeout);
     }
     if(jsonInput.contains("byteTimeout"))
     {
-      auto byteTimeout = jsonInput.at("byteTimout").get<double>();
+      auto byteTimeout = jsonInput.at("byteTimeout").get<int>();
       m_modbus->setByteTimeout(byteTimeout);
     }
 
@@ -41,12 +59,12 @@ bool ModbusPort::Initialize(json& jsonInput)
     
     if(jsonInput.contains("responseTimout"))
     {
-      auto responseTimeout = jsonInput.at("responseTimout").get<double>();
+      auto responseTimeout = jsonInput.at("responseTimeout").get<int>();
       m_modbus->setResponseTimeout(responseTimeout);
     }
     if(jsonInput.contains("byteTimeout"))
     {
-      auto byteTimeout = jsonInput.at("byteTimout").get<double>();
+      auto byteTimeout = jsonInput.at("byteTimeout").get<int>();
       m_modbus->setByteTimeout(byteTimeout);
     }
 
@@ -60,50 +78,6 @@ void ModbusPort::AddSlave(int address)
 {
   /* right now this only works for RS485 slaves, TODO: support for modbustcp */
   m_modbus->addSlave(address);
-}
-
-template<class T>
-std::vector<T> ModbusPort::ReadHoldingRegister(int baseAddress, int number, int slaveAddres)
-{
-  /* TODO: do some error handling */
-  std::vector<T> result;
-  if(m_modbus->open())
-  {
-    std::vector<Modbus::Data<T, Modbus::EndianBigLittle>> data;
-    data.resize(number);
-    Modbus::Slave& slv = m_modbus->slave(slaveAddres);
-
-    if(slv.readRegisters(baseAddress, data.data(), number))
-    {
-      for(auto value : data)
-        result.push_back(value.value());
-      
-      return result;
-    }
-  }
-  else
-  {
-    return result;
-  }
-}
-
-template<class T>
-bool ModbusPort::WriteHoldingRegister(int baseAddress, std::vector<T> values, int slaveAddress)
-{
-  if(m_modbus->open())
-  {
-    std::vector<Modbus::Data<T, Modbus::EndianBigLittle>> data;
-    Modbus::Slave& slv = m_modbus->slave(slaveAddress);
-    for(auto value : values)
-    {
-      Modbus::Data<T, Modbus::EndianBigLittle> tempData = value;
-      data.push_back(tempData);
-    }
-    slv.writeRegisters(baseAddress, data.data(), data.size());
-    return true;
-  }
-  else
-    return false;
 }
 
 bool ModbusPort::WriteSingleRegister(int baseAddress, uint16_t value, int slaveAddress)

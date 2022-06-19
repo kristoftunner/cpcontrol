@@ -6,9 +6,7 @@
 #include <map>
 
 #include "device_comm.hpp"
-#include "json.hpp"
 
-using json = nlohmann::json;
 enum class Devicetype {
   powerMeter,
   inverter,
@@ -115,7 +113,6 @@ protected:
   Devicetype m_type;
 public:
   virtual int ReadMeasurements() = 0;
-  virtual ~BaseDevice(){}
 };
 
 class PowerMeterDevice : public BaseDevice {
@@ -123,9 +120,9 @@ protected:
   PowerMeterData m_data;
 public:
   PowerMeterDevice() {m_type = Devicetype::powerMeter;}
-  virtual int Initialize(json& config) {};
-  virtual int ReadMeasurements();
-  virtual PowerMeterData GetPowerMeterData() {};
+  virtual int Initialize(json& config) = 0;
+  virtual int ReadMeasurements() override {};
+  virtual PowerMeterData GetPowerMeterData() {return m_data;};
 };
 
 class SchneiderPM5110Meter : public PowerMeterDevice 
@@ -169,8 +166,8 @@ protected:
 public:
   InverterDevice() {m_type = Devicetype::inverter;}
 
-  virtual int Initialize(json config);
-  virtual int ReadMeasurements() override;
+  virtual int Initialize(json config) = 0;
+  virtual int ReadMeasurements() override {};
   virtual InverterData GetInverterData() {return m_data;}
 };
 
@@ -198,5 +195,31 @@ public:
   template<class T>
   int ReadMeasurements(){ return ForEachDevice<&T::ReadMeasurements>();}
 };
+
+template<int (PowerMeterDevice::*functor)()>
+int DeviceContainer::ForEachDevice()
+{
+  int containerSize = m_powerMeterContainer.size();
+  for(int i = 0; i < containerSize; i++)
+  {
+    PowerMeterDevice *device = m_powerMeterContainer[i];
+    (device->*functor)();
+  }
+
+  return 0;
+}
+
+template<int (InverterDevice::*functor)()>
+int DeviceContainer::ForEachDevice()
+{
+  int containerSize = m_inverterContainer.size();
+  for(int i = 0; i < containerSize; i++)
+  {
+    InverterDevice *device = m_inverterContainer[i];
+    (device->*functor)();
+  }
+  
+  return 0;
+}
 
 #endif //DEVICE_HPP

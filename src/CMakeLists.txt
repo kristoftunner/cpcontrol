@@ -1,15 +1,13 @@
 cmake_minimum_required(VERSION 3.12)
 
 find_package(modbuspp REQUIRED)
+
 add_library(cpcontrol
   STATIC 
   device.cpp
   device_comm.cpp
   enerman.cpp
 )
-
-set_property(TARGET cpcontrol PROPERTY CMAKE_CXX_STANDARD 20)
-set_property(TARGET cpcontrol PROPERTY CMAKE_CXX_STANDARD_REQUIRED ON)
 
 target_include_directories(cpcontrol
   PUBLIC 
@@ -18,7 +16,9 @@ target_include_directories(cpcontrol
 )
 
 target_link_libraries(cpcontrol
-  PUBLIC modbuspp
+  PUBLIC 
+  modbuspp
+  ${MODBUSPP_LIBRARIES}
 )
 
 add_executable(sandbox_app
@@ -28,6 +28,7 @@ add_executable(sandbox_app
 target_link_libraries(sandbox_app
   PUBLIC
   cpcontrol
+  ${MODBUSPP_LIBRARIES}
 )
 target_include_directories(sandbox_app
   PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}

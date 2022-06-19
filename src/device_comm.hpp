@@ -25,4 +25,48 @@ public:
   bool WriteSingleRegister(int baseAddress, uint16_t value, int slaveAddress);
 };
 
+template<class T>
+std::vector<T> ModbusPort::ReadHoldingRegister(int baseAddress, int number, int slaveAddres)
+{
+  /* TODO: do some error handling */
+  std::vector<T> result;
+  if(m_modbus->open())
+  {
+    std::vector<Modbus::Data<T, Modbus::EndianBigLittle>> data;
+    data.resize(number);
+    Modbus::Slave& slv = m_modbus->slave(slaveAddres);
+
+    if(slv.readRegisters(baseAddress, data.data(), number))
+    {
+      for(auto value : data)
+        result.push_back(value.value());
+      
+      return result;
+    }
+  }
+  else
+  {
+    return result;
+  }
+}
+
+template<class T>
+bool ModbusPort::WriteHoldingRegister(int baseAddress, std::vector<T> values, int slaveAddress)
+{
+  if(m_modbus->open())
+  {
+    std::vector<Modbus::Data<T, Modbus::EndianBigLittle>> data;
+    Modbus::Slave& slv = m_modbus->slave(slaveAddress);
+    for(auto value : values)
+    {
+      Modbus::Data<T, Modbus::EndianBigLittle> tempData = value;
+      data.push_back(tempData);
+    }
+    slv.writeRegisters(baseAddress, data.data(), data.size());
+    return true;
+  }
+  else
+    return false;
+}
+
 #endif //DEVICE_COMM_HPP

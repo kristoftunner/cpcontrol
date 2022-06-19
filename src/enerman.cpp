@@ -41,12 +41,7 @@ EnermanReturnCode Enerman::BuildDevices(json devicesConfig)
   {
     for(auto inverter : devicesConfig.at("inverters"))
     {
-      auto commPortName = inverter.at("interfacePort").get<std::string>();
-      InverterDevice *device = new InverterDevice();
-      if(device->Initialize(inverter) == 0)
-        m_deviceContainer.AppendDevice(device);
-      else
-        return EnermanReturnCode::ENERMAN_CONFIG_ERR;
+      /* right now there is no supported inverter */
     }
   }
 

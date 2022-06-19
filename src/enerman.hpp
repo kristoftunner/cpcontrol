@@ -3,10 +3,7 @@
 #include <vector>
 #include <map>
 
-#include "json.hpp"
 #include "device.hpp"
-
-using json = nlohmann::json;
 
 enum class EnermanReturnCode{
   ENERMAN_OK,
@@ -14,6 +11,10 @@ enum class EnermanReturnCode{
   ENERMAN_READ_ERR
 };
 
+/**
+ * @brief energy managment system controller class
+ * 
+ */
 class Enerman {
 private:
   DeviceContainer m_deviceContainer;
@@ -21,6 +22,7 @@ private:
 public:
   EnermanReturnCode BuildDevices(json devicesConfig);
   EnermanReturnCode Execute();
+  EnermanReturnCode ExtractMeasurements();
 };
 
 #endif //ENERMAN_HPP
