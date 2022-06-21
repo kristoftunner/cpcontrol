@@ -65,25 +65,26 @@ public:
 struct InverterData {
 public:
   InverterData(){
-    float powerDc = 0;
-    float currentDc = 0;
-    float voltageDc = 0;
+    powerDc = 0;
+    currentDc = 0;
+    voltageDc = 0;
 
-    float powerAcTotal = 0;
-    float powerAcPhase1 = 0;
-    float powerAcPhase2 = 0;
-    float powerAcPhase3 = 0;
+    powerAcTotal = 0;
+    powerAcPhase1 = 0;
+    powerAcPhase2 = 0;
+    powerAcPhase3 = 0;
 
-    float currentAcPhase1 = 0;
-    float currentAcPhase2 = 0;
-    float currentAcPhase3 = 0;
-    float voltageAcPhase1 = 0; 
-    float voltageAcPhase2 = 0; 
-    float voltageAcPhase3 = 0; 
+    currentAcPhase1 = 0;
+    currentAcPhase2 = 0;
+    currentAcPhase3 = 0;
+    voltageAcPhase1 = 0; 
+    voltageAcPhase2 = 0; 
+    voltageAcPhase3 = 0; 
 
-    float inverterTemperature = 0;
-    uint32_t inverterStatus = 0;
-    uint32_t inverterError = 0;
+    inverterTemperature = 0;
+    inverterStatus = 0;
+    inverterError = 0;
+    frequency = 0;
   }
   std::string assetId;
   float powerDc;
@@ -101,6 +102,8 @@ public:
   float voltageAcPhase1; 
   float voltageAcPhase2; 
   float voltageAcPhase3; 
+
+  float frequency;
 
   float inverterTemperature;
   uint32_t inverterStatus;
@@ -169,6 +172,7 @@ public:
   virtual int Initialize(json config) = 0;
   virtual int ReadMeasurements() override {};
   virtual InverterData GetInverterData() {return m_data;}
+  virtual void UpdatePower(float powerSetpoint);
 };
 
 class DeviceContainer {
