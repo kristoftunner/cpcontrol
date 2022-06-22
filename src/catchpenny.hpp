@@ -9,7 +9,7 @@
 enum class CatchpennyState{
   CATCHPENNY_CHARGE,
   CATCHPENNY_DISCHARGE,
-  CATCHPENNY_STOPPED,
+  CATCHPENNY_IDLE,
   CATCHPENNY_HALTED_ON_ERROR
 };
 
@@ -47,19 +47,30 @@ struct BatteryPackMetaData {
   uint32_t batteryError = 0;
 };
 
-template<int cellNumber>
 class Battery {
 private:
-  std::vector<Cell> m_cells(cellNumber);
+  std::shared_ptr<ModbusPort> m_commPotr;
+  std::vector<Cell> m_cells;
   BatteryPackMetaData m_data;
+  const float m_batteryCapacity;
+  float m_availablePower;
+  float m_maxCellVoltage;
+  float m_minCellVoltage;
+  float m_maxCellTemperature;
+  float m_minCellTemperature;
 public:
+  Battery(float batteryCapacity, int cellNumber) : m_maxCellVoltage(45.5), m_minCellVoltage(35.5), m_maxCellTemperature(65), m_minCellTemperature(2), m_batteryCapacity(batteryCapacity)
+  {m_cells.resize(cellNumber);}
   bool CheckOverVoltage();
   bool CheckUnderVoltage();
   bool CheckOverTemperature();
   bool CheckUnderTemperature();
   const Cell& GetCell(int index);
-  const BatteryDataPack& GetBatteryDataPack();
+  const BatteryPackMetaData& GetBatterMetaData();
   int ReadMeasurements();
+  float GetAvailableChargeStorage();    // in kWh
+  float GetAvailableDischargeStorage(); // in kWh
+  void SetCommPort(std::shared_ptr<ModbusPort> commPort){m_commPotr = commPort;};
 };
 
 /**
@@ -69,25 +80,24 @@ public:
  *  - GetConfig() 
  *  - Initialize()
  */
-template<typename PARAMETERS>
 class Catchpenny {
 private:
-  std::vector<std::shared_ptr<Inverter>> m_chargers;
-  std::vector<std::shared_ptr<Inverter>> m_dischargers;
-  Battery<80> m_battery;
+  std::vector<std::shared_ptr<InverterDevice>> m_chargers;
+  std::vector<std::shared_ptr<InverterDevice>> m_dischargers;
+  std::vector<Battery> m_battery;
   CatchpennyConfig m_config;
   float m_powerSetpoint;
+  float m_actualPower;
   CatchpennyState m_state;
   void DoCellProtectionLogic();
 public:
   Catchpenny(CatchpennyConfig config) : m_config(config){}
-  void AppendCharger(std::shared_ptr<Inverter> charger);
-  void AppendDischarger(std::shared_ptr<Inverter> discharger);
+  void AppendCharger(std::shared_ptr<InverterDevice> charger);
+  void AppendDischarger(std::shared_ptr<InverterDevice> discharger);
   void ReadMeasurements();
   bool UpdateControl();
   void SetPowerSetpoint(float powerSetpoint);
-
-private:
-  void DoCellProtectionLogic();
+  void SafetyShutDown();
 };
+
 #endif //CATCHPENNY_HPP

@@ -7,6 +7,7 @@ add_library(cpcontrol
   device.cpp
   device_comm.cpp
   enerman.cpp
+  catchpenny.cpp
 )
 
 target_include_directories(cpcontrol
