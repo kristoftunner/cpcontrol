@@ -95,6 +95,7 @@ public:
   float powerAcPhase1;
   float powerAcPhase2;
   float powerAcPhase3;
+  float powerFactor;
 
   float currentAcPhase1;
   float currentAcPhase2;
@@ -175,6 +176,28 @@ public:
   virtual void UpdatePower(float powerSetpoint);
 };
 
+class FroniusIgPlus : public InverterDevice {
+private:
+  std::shared_ptr<ModbusPort> m_commPort;
+  int m_address;
+  constexpr maxContinuousPower = 5000; // in W
+  /* register addresses */
+  constexpr acCurrentRegBase = 40071;
+  constexpr acVoltageBase = 40079;
+  constexpr acPowerBase = 40083;
+  constexpr powerSetpointRegBase = 40232;
+  constexpr throttleEnableRegBase = 40236;
+  constexpr dcValues1Base = 40272;
+  constexpr dcValues2Base = 40292;
+public:
+  FroniusIgPlus(){m_type = Devicetype::inverter;}
+  virtual int Initialize(json& config) override;
+  virtual int ReadMeasurements() override;
+  virtual PowerMeterData GetInverterData() {return m_data;}
+  virtual void UpdatePower(float powerSetpoint) override;
+
+  void SetCommPort(std::shared_ptr<ModbusPort> commPort) {m_commPort = commPort;}
+}
 class DeviceContainer {
 private:
   std::vector<PowerMeterDevice*> m_powerMeterContainer;

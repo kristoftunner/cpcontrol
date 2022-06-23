@@ -198,7 +198,8 @@ bool Catchpenny::UpdateControl()
 
 void Catchpenny::DoCellProtectionLogic()
 {
-  /* check if the battery is OK, if not -> set state HALTED_ON_ERROR*/
+  /* check if the battery is OK, if not -> set state HALTED_ON_ERROR
+    TODO: do some error handling here */
   for(auto battery : m_battery)
   {
     if((battery.CheckOverTemperature() && battery.CheckOverVoltage() && battery.CheckUnderTemperature()
@@ -226,7 +227,7 @@ bool Battery::CheckOverVoltage()
 {
   for(Cell& cell : m_cells)
   {
-    if(cell.voltage > m_maxCellTemperature)
+    if(cell.voltage > m_cellConfig.maxCellVoltage)
       return false;
   }
   return true;
@@ -236,7 +237,7 @@ bool Battery::CheckUnderVoltage()
 {
   for(Cell& cell : m_cells)
   {
-    if(cell.voltage < m_minCellTemperature)
+    if(cell.voltage < m_cellConfig.minCellVoltage)
       return false;
   }
   return true;
@@ -246,7 +247,7 @@ bool Battery::CheckOverTemperature()
 {
   for(Cell& cell : m_cells)
   {
-    if(cell.temperature > m_maxCellTemperature)
+    if(cell.temperature > m_cellConfig.maxCellTemperature)
       return false;
   }
   return true;
@@ -256,7 +257,7 @@ bool Battery::CheckUnderTemperature()
 {
   for(Cell& cell : m_cells)
   {
-    if(cell.temperature < m_minCellTemperature)
+    if(cell.temperature < m_cellConfig.minCellTemperature)
       return false;
   }
   return true;

@@ -47,6 +47,10 @@ struct BatteryPackMetaData {
   uint32_t batteryError = 0;
 };
 
+struct CellConfig {
+  float maxCellVoltage, minCellVoltage, maxCellTemperature, minCellTemperature;
+};
+
 class Battery {
 private:
   std::shared_ptr<ModbusPort> m_commPotr;
@@ -54,12 +58,9 @@ private:
   BatteryPackMetaData m_data;
   const float m_batteryCapacity;
   float m_availablePower;
-  float m_maxCellVoltage;
-  float m_minCellVoltage;
-  float m_maxCellTemperature;
-  float m_minCellTemperature;
+  CellConfig m_cellConfig;
 public:
-  Battery(float batteryCapacity, int cellNumber) : m_maxCellVoltage(45.5), m_minCellVoltage(35.5), m_maxCellTemperature(65), m_minCellTemperature(2), m_batteryCapacity(batteryCapacity)
+  Battery(float batteryCapacity, int cellNumber, CellConfig cellConfig) : m_cellConfig(cellConfig), m_batteryCapacity(batteryCapacity)
   {m_cells.resize(cellNumber);}
   bool CheckOverVoltage();
   bool CheckUnderVoltage();
