@@ -2,12 +2,12 @@
 
 #include "catchpenny.hpp"
 
-void Catchpenny::AppendCharger(std::shared_ptr<InverterDevice> charger)
+void Catchpenny::AppendCharger(InverterDevice* charger)
 {
   m_chargers.push_back(charger);
 }
 
-void Catchpenny::AppendDischarger(std::shared_ptr<InverterDevice> discharger)
+void Catchpenny::AppendDischarger(InverterDevice* discharger)
 {
   m_dischargers.push_back(discharger);
 }
@@ -304,8 +304,13 @@ int Battery::ReadMeasurements()
       m_cells[i*5+3].temperature =  static_cast<float>(cellTemperatureValues[i+1] & 0xff) - 50; 
       m_cells[i*5+4].temperature =  static_cast<float>(cellTemperatureValues[i+2] >> 8) - 50; 
     }
-  }
   
+  }
+  float stateOfCharge = 0; // scaled to the total power between 0-1
+  for(const auto& cell : m_cells)
+    stateOfCharge += (m_batteryCapacity / m_cells.size()) * cell.capacity;
+  
+  m_data.stateOfCharge = stateOfCharge;
   return 0;
 }
 

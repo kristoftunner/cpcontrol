@@ -4,6 +4,7 @@
 #include <map>
 
 #include "device.hpp"
+#include "catchpenny.hpp"
 
 enum class EnermanReturnCode{
   ENERMAN_OK,
@@ -19,10 +20,13 @@ class Enerman {
 private:
   DeviceContainer m_deviceContainer;
   std::map<std::string, std::shared_ptr<ModbusPort>> m_modbusCommPortMap;
+  Catchpenny m_catchpenny;
 public:
+  Enerman(){}
   EnermanReturnCode BuildDevices(json devicesConfig);
   EnermanReturnCode Execute();
   EnermanReturnCode ExtractMeasurements();
+  int SetupCatchpenny(json& config);
 };
 
 #endif //ENERMAN_HPP

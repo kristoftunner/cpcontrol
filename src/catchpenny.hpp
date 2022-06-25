@@ -57,11 +57,10 @@ private:
   std::vector<Cell> m_cells;
   BatteryPackMetaData m_data;
   int m_address;
-  const float m_batteryCapacity;
-  float m_availablePower;
+  float m_batteryCapacity;
   CellConfig m_cellConfig;
 public:
-  Battery(float batteryCapacity, int cellNumber, CellConfig cellConfig) : m_cellConfig(cellConfig), m_batteryCapacity(batteryCapacity)
+  Battery(float batteryCapacity, int cellNumber, CellConfig cellConfig, int address) : m_cellConfig(cellConfig), m_batteryCapacity(batteryCapacity), m_address(address)
   {m_cells.resize(cellNumber);}
   bool CheckOverVoltage();
   bool CheckUnderVoltage();
@@ -89,8 +88,8 @@ private:
  */
 class Catchpenny {
 private:
-  std::vector<std::shared_ptr<InverterDevice>> m_chargers;
-  std::vector<std::shared_ptr<InverterDevice>> m_dischargers;
+  std::vector<InverterDevice*> m_chargers;
+  std::vector<InverterDevice*> m_dischargers;
   std::vector<Battery> m_battery;
   CatchpennyConfig m_config;
   float m_powerSetpoint;
@@ -98,9 +97,11 @@ private:
   CatchpennyState m_state;
   void DoCellProtectionLogic();
 public:
+  Catchpenny(){}
   Catchpenny(CatchpennyConfig config) : m_config(config){}
-  void AppendCharger(std::shared_ptr<InverterDevice> charger);
-  void AppendDischarger(std::shared_ptr<InverterDevice> discharger);
+  void AppendCharger(InverterDevice* charger);
+  void AppendDischarger(InverterDevice* discharger);
+  void AppendBattery(Battery battery){m_battery.push_back(battery);}
   void ReadMeasurements();
   bool UpdateControl();
   void SetPowerSetpoint(float powerSetpoint);

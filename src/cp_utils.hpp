@@ -19,6 +19,7 @@ public:
     if(ifs.is_open())
     {
       ifs >> m_jsonConfig;
+      return true;
     }
     else
       return false;

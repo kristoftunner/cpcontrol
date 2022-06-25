@@ -27,7 +27,25 @@
     "interfacePort" : "modbusRTU1",
     "manufacturer" : "schneider",
     "model" : "schneiderPM5110"
-  }],
+  },
+  {
+    "address" : 1,
+    "interfacePort" : "modbusTcp1",
+    "manufacturer" : "janitza",
+    "model" : "umg96rm-m"
+  }
+  ],
+  "inverters" : [{
+    "manufacturer" : "SMA",
+    "model" : "SunnyTripowerCore1",
+    "interface" : "modbusRS485"
+  },
+  {
+    "manufacturer" : "huawei",
+    "model" : "sun2000-3ktl-m1",
+    "interface" : "modbustcp"
+  }
+  ],
   "catchpenny" : {
     "interfacePort" : "modbusRTU1",
     "chargers": [
