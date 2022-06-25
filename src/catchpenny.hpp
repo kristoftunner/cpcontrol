@@ -53,9 +53,10 @@ struct CellConfig {
 
 class Battery {
 private:
-  std::shared_ptr<ModbusPort> m_commPotr;
+  std::shared_ptr<ModbusPort> m_commPort;
   std::vector<Cell> m_cells;
   BatteryPackMetaData m_data;
+  int m_address;
   const float m_batteryCapacity;
   float m_availablePower;
   CellConfig m_cellConfig;
@@ -71,7 +72,12 @@ public:
   int ReadMeasurements();
   float GetAvailableChargeStorage();    // in kWh
   float GetAvailableDischargeStorage(); // in kWh
-  void SetCommPort(std::shared_ptr<ModbusPort> commPort){m_commPotr = commPort;};
+  void SetCommPort(std::shared_ptr<ModbusPort> commPort){m_commPort = commPort;};
+
+private:
+  static constexpr int cellVoltagesBaseReg = 0;
+  static constexpr int cellTemperaturesBaseReg = 80;
+  static constexpr int cellCapacityBaseReg = 110;
 };
 
 /**

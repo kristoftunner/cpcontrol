@@ -276,6 +276,37 @@ const BatteryPackMetaData& Battery::GetBatterMetaData()
 int Battery::ReadMeasurements()
 {
   /* read the measurements, update cell data and BatteryMetaData */
+  std::vector<uint16_t> cellVoltageValues = m_commPort->ReadHoldingRegister<uint16_t>(cellVoltagesBaseReg,m_cells.size(),m_address);
+  std::vector<uint16_t> cellTemperatureValues = m_commPort->ReadHoldingRegister<uint16_t>(cellTemperaturesBaseReg,30,m_address);
+  std::vector<uint16_t> cellCapacityValues = m_commPort->ReadHoldingRegister<uint16_t>(cellCapacityBaseReg,m_cells.size(),m_address);
+  if(cellVoltageValues.size() != m_cells.size() && cellCapacityValues.size() != m_cells.size())  
+  { 
+    return 1; /*TODO: some error handling*/
+  }
+  else
+  {
+    for(size_t index; auto& voltage : cellVoltageValues)
+      m_cells[index].voltage = static_cast<float>(voltage) * 0.001;
+    for(size_t index; auto& capacity : cellCapacityValues)
+      m_cells[index].capacity = static_cast<float>(capacity) * 0.001;
+  }
+  if(cellTemperatureValues.size() != 30)
+  {
+    return 1; /* TODO: do the error handling here */
+  }
+  else 
+  {
+    for(int i = 0; i < cellTemperatureValues.size()/3; i++)
+    {
+      m_cells[i*5].temperature   =  static_cast<float>(cellTemperatureValues[i] >> 8) - 50;
+      m_cells[i*5+1].temperature =  static_cast<float>(cellTemperatureValues[i] & 0xff) - 50; 
+      m_cells[i*5+2].temperature =  static_cast<float>(cellTemperatureValues[i+1] >> 8) - 50; 
+      m_cells[i*5+3].temperature =  static_cast<float>(cellTemperatureValues[i+1] & 0xff) - 50; 
+      m_cells[i*5+4].temperature =  static_cast<float>(cellTemperatureValues[i+2] >> 8) - 50; 
+    }
+  }
+  
+  return 0;
 }
 
 float Battery::GetAvailableChargeStorage()

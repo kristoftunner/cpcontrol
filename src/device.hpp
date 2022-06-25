@@ -133,25 +133,25 @@ class SchneiderPM5110Meter : public PowerMeterDevice
 {
 private:
 /* define the register addresses here: */
-  const uint32_t currentPhase1Reg = 3000;
-  const uint32_t currentPhase2Reg = 3002;
-  const uint32_t currentPhase3Reg = 3004;
-  const uint32_t voltagePhase1Reg = 3028;
-  const uint32_t voltagePhase2Reg = 3030;
-  const uint32_t voltagePhase3Reg = 3032;
-  const uint32_t powerAcPhase1Reg = 3054;
-  const uint32_t powerAcPhase2Reg = 3056;
-  const uint32_t powerAcPhase3Reg = 3058;
-  const uint32_t powerAcTotalReg  = 3060;
-  const uint32_t powerReactivePhase1Reg = 3062;
-  const uint32_t powerReactivePhase2Reg = 3064;
-  const uint32_t powerReactivePhase3Reg = 3066;
-  const uint32_t powerReactiveTotalReg = 3068;
-  const uint32_t powerApparentPhase1Reg = 3070;
-  const uint32_t powerApparentPhase2Reg = 3072;
-  const uint32_t powerApparentPhase3Reg = 3074;
-  const uint32_t powerApparentTotalReg = 3076;
-  const uint32_t frequencyReg = 3110;
+  static constexpr int currentPhase1Reg = 3000;
+  static constexpr int currentPhase2Reg = 3002;
+  static constexpr int currentPhase3Reg = 3004;
+  static constexpr int voltagePhase1Reg = 3028;
+  static constexpr int voltagePhase2Reg = 3030;
+  static constexpr int voltagePhase3Reg = 3032;
+  static constexpr int powerAcPhase1Reg = 3054;
+  static constexpr int powerAcPhase2Reg = 3056;
+  static constexpr int powerAcPhase3Reg = 3058;
+  static constexpr int powerAcTotalReg  = 3060;
+  static constexpr int powerReactivePhase1Reg = 3062;
+  static constexpr int powerReactivePhase2Reg = 3064;
+  static constexpr int powerReactivePhase3Reg = 3066;
+  static constexpr int powerReactiveTotalReg = 3068;
+  static constexpr int powerApparentPhase1Reg = 3070;
+  static constexpr int powerApparentPhase2Reg = 3072;
+  static constexpr int powerApparentPhase3Reg = 3074;
+  static constexpr int powerApparentTotalReg = 3076;
+  static constexpr int frequencyReg = 3110;
 
   std::shared_ptr<ModbusPort> m_commPort;
   int m_address;
@@ -170,34 +170,55 @@ protected:
 public:
   InverterDevice() {m_type = Devicetype::inverter;}
 
-  virtual int Initialize(json config) = 0;
+  virtual int Initialize(json& config) = 0;
   virtual int ReadMeasurements() override {};
   virtual InverterData GetInverterData() {return m_data;}
-  virtual void UpdatePower(float powerSetpoint);
+  virtual void UpdatePower(float powerSetpoint) = 0;
 };
 
 class FroniusIgPlus : public InverterDevice {
 private:
   std::shared_ptr<ModbusPort> m_commPort;
   int m_address;
-  constexpr maxContinuousPower = 5000; // in W
+  static constexpr float maxContinuousPower = 5000; // in W
   /* register addresses */
-  constexpr acCurrentRegBase = 40071;
-  constexpr acVoltageBase = 40079;
-  constexpr acPowerBase = 40083;
-  constexpr powerSetpointRegBase = 40232;
-  constexpr throttleEnableRegBase = 40236;
-  constexpr dcValues1Base = 40272;
-  constexpr dcValues2Base = 40292;
+  static constexpr int acCurrentRegBase = 40071;
+  static constexpr int acVoltageBase = 40079;
+  static constexpr int acPowerBase = 40083;
+  static constexpr int powerSetpointRegBase = 40232;
+  static constexpr int throttleEnableRegBase = 40236;
+  static constexpr int dcValues1Base = 40272;
+  static constexpr int dcValues2Base = 40292;
 public:
-  FroniusIgPlus(){m_type = Devicetype::inverter;}
+  FroniusIgPlus(){}
   virtual int Initialize(json& config) override;
   virtual int ReadMeasurements() override;
-  virtual PowerMeterData GetInverterData() {return m_data;}
   virtual void UpdatePower(float powerSetpoint) override;
 
   void SetCommPort(std::shared_ptr<ModbusPort> commPort) {m_commPort = commPort;}
-}
+};
+
+class Tesla : public InverterDevice {
+private:
+  std::shared_ptr<ModbusPort> m_commPort;
+  int m_address;
+  static constexpr float maxContinuousPower = 5000; /*TODO specify this in the future*/
+  /* register addresses */
+  static constexpr int cellVoltagesBase = 0;
+  static constexpr int cellTemperaturesBase = 80;
+  static constexpr int cellCapacitiesBase = 110;
+  static constexpr int chargeCurrentBase = 190;
+  static constexpr int statusMeasurementRegBase = 191;
+  static constexpr int waterTemperatureBase = 206;
+public:
+  Tesla(){}
+  virtual int Initialize(json& config) override;
+  virtual int ReadMeasurements() override;
+  virtual void UpdatePower(float powerSetpoint) override;
+
+  void SetCommPort(std::shared_ptr<ModbusPort> commPort) {m_commPort = commPort;}
+};
+
 class DeviceContainer {
 private:
   std::vector<PowerMeterDevice*> m_powerMeterContainer;

@@ -77,28 +77,28 @@ int FroniusIgPlus::ReadMeasurements()
     m_data.currentAcPhase3 = static_cast<float>(currentValues[3]) * pow(10, scaleFactor);
   }
 
-  std::vector<uint16_t> voltageAndPowerValues = m_commPort->ReadHoldingRegister<uint16_t>(acVoltagesBase,14,m_address);
+  std::vector<uint16_t> voltageAndPowerValues = m_commPort->ReadHoldingRegister<uint16_t>(acVoltageBase,14,m_address);
   if(voltageAndPowerValues.size() != 14)
     return 1;
   else
   {
     /* scale values */
-    float voltageScale = static_cast<float>(static_cast<int16_t>(voltaAndPowerValues[3]));
-    float acPowerScale = static_cast<float>(static_cast<int16_t>(voltaAndPowerValues[5]));
-    float acFrequencyScale = static_cast<float>(static_cast<int16_t>(voltaAndPowerValues[7]));
-    float acApparentPowerScale = static_cast<float>(static_cast<int16_t>(voltaAndPowerValues[9]));
-    float acReactivePowerScale = static_cast<float>(static_cast<int16_t>(voltaAndPowerValues[11]));
-    float powerFactorScale = static_cast<float>(static_cast<int16_t>(voltaAndPowerValues[13]));
+    float voltageScale = static_cast<float>(static_cast<int16_t>(voltageAndPowerValues[3]));
+    float acPowerScale = static_cast<float>(static_cast<int16_t>(voltageAndPowerValues[5]));
+    float acFrequencyScale = static_cast<float>(static_cast<int16_t>(voltageAndPowerValues[7]));
+    float acApparentPowerScale = static_cast<float>(static_cast<int16_t>(voltageAndPowerValues[9]));
+    float acReactivePowerScale = static_cast<float>(static_cast<int16_t>(voltageAndPowerValues[11]));
+    float powerFactorScale = static_cast<float>(static_cast<int16_t>(voltageAndPowerValues[13]));
   
-    m_data.voltageAcPhase1 = static_cast<float>(voltaAndPowerValues[0]) * pow(10, voltageScale);
-    m_data.voltageAcPhase2 = static_cast<float>(voltaAndPowerValues[1]) * pow(10, voltageScale);
-    m_data.voltageAcPhase3 = static_cast<float>(voltaAndPowerValues[2]) * pow(10, voltageScale);
-    m_data.powerAcTotal = static_cast<float>(voltaAndPowerValues[4]) * pow(10, acPowerScale);
+    m_data.voltageAcPhase1 = static_cast<float>(voltageAndPowerValues[0]) * pow(10, voltageScale);
+    m_data.voltageAcPhase2 = static_cast<float>(voltageAndPowerValues[1]) * pow(10, voltageScale);
+    m_data.voltageAcPhase3 = static_cast<float>(voltageAndPowerValues[2]) * pow(10, voltageScale);
+    m_data.powerAcTotal = static_cast<float>(voltageAndPowerValues[4]) * pow(10, acPowerScale);
     m_data.powerAcPhase1 = m_data.powerAcTotal / 3;
     m_data.powerAcPhase2 = m_data.powerAcTotal / 3;
     m_data.powerAcPhase3 = m_data.powerAcTotal / 3;
-    m_data.frequency = static_cast<float>(voltaAndPowerValues[6]) * pow(10, acFrequencyScale);
-    m_data.powerFactor = static_cast<float>(voltaAndPowerValues[12]) * pow(10, powerFactorScale);
+    m_data.frequency = static_cast<float>(voltageAndPowerValues[6]) * pow(10, acFrequencyScale);
+    m_data.powerFactor = static_cast<float>(voltageAndPowerValues[12]) * pow(10, powerFactorScale);
   }
   
   std::vector<uint16_t> dc1 = m_commPort->ReadHoldingRegister<uint16_t>(dcValues1Base,2,m_address);
@@ -116,5 +116,72 @@ int FroniusIgPlus::ReadMeasurements()
 
 void FroniusIgPlus::UpdatePower(float powerSetpoint)
 {
-
+  /* update trhottle -> enable control
+    TODO: do some error handling here*/
+  if(powerSetpoint > maxContinuousPower)
+    ;
+  else
+  {
+    uint16_t percentSetPoint = static_cast<uint16_t>(powerSetpoint / maxContinuousPower * 100);
+    if(m_commPort->WriteSingleRegister(powerSetpointRegBase, percentSetPoint, m_address) == false)
+    {
+      ;
+    }
+    if(m_commPort->WriteSingleRegister(throttleEnableRegBase, 1, m_address) == false)
+    {
+      ;
+    }
+  }
+  return ;
 }
+
+int Tesla::Initialize(json& config)
+{
+  m_address = config.at("address").get<int>();
+  return 0;
+} 
+
+int Tesla::ReadMeasurements()
+{
+  /* read current, voltages and power values */
+  std::vector<uint16_t> statusMeasValues = m_commPort->ReadHoldingRegister<uint16_t>(statusMeasurementRegBase,12,m_address);
+  if(statusMeasValues.size() != 12)
+    return 1;
+  else
+  {
+    m_data.voltageAcPhase1 = static_cast<float>(statusMeasValues[2]) * 0.01;
+    m_data.voltageAcPhase2 = static_cast<float>(statusMeasValues[3]) * 0.01;
+    m_data.voltageAcPhase3 = 0;
+    m_data.currentAcPhase1 = static_cast<float>(statusMeasValues[4]) * 0.001;
+    m_data.currentAcPhase2 = static_cast<float>(statusMeasValues[5]) * 0.001;
+    m_data.currentAcPhase3 = 0;
+    m_data.voltageDc = static_cast<float>((statusMeasValues[6] + statusMeasValues[7])/2) * 0.01;
+    m_data.currentDc = static_cast<float>(statusMeasValues[8] + statusMeasValues[9]) * 0.001; 
+    m_data.frequency = 50; /* TODO: later think about it*/
+    m_data.inverterTemperature = (statusMeasValues[10] > statusMeasValues[11] ? statusMeasValues[10] : statusMeasValues[11]) - 50;
+    m_data.powerAcPhase1 = m_data.voltageAcPhase1 * m_data.currentAcPhase1 * pow(3,0.5); 
+    m_data.powerAcPhase2 = m_data.voltageAcPhase2 * m_data.currentAcPhase2 * pow(3,0.5); 
+    m_data.powerAcPhase1 = m_data.voltageAcPhase1 * m_data.currentAcPhase1 * pow(3,0.5); 
+    m_data.powerAcTotal = m_data.powerAcPhase1 + m_data.powerAcPhase2 + m_data.powerAcPhase3;
+    m_data.powerFactor = m_data.powerAcTotal / (m_data.currentDc * m_data.voltageDc);
+    m_data.inverterError = 0;
+    m_data.inverterStatus = 0; /* TODO: revisit this status thing */
+    return 0;
+  }
+} 
+
+void Tesla::UpdatePower(float powerSetpoint)
+{
+  if(powerSetpoint > maxContinuousPower)
+    ;
+  else
+  {
+    uint16_t chargeCurrent = (powerSetpoint / ((m_data.voltageAcPhase1 + m_data.voltageAcPhase2) / 2)) / 2;
+    if(m_commPort->WriteSingleRegister(chargeCurrentBase, chargeCurrent, m_address) == false)
+    {
+      ; /* TODO: do the error handling */
+    }
+  }
+  return;
+} 
+
