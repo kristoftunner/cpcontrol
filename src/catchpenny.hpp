@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <vector>
+#include <mutex>
 
 #include "device.hpp"
 
@@ -45,6 +46,7 @@ struct BatteryPackMetaData {
   float stateOfCharge = 0;
   uint32_t batteryStatus = 0;
   uint32_t batteryError = 0;
+  std::shared_ptr<std::mutex> dataMutex;
 };
 
 struct CellConfig {
@@ -72,6 +74,7 @@ public:
   float GetAvailableChargeStorage();    // in kWh
   float GetAvailableDischargeStorage(); // in kWh
   void SetCommPort(std::shared_ptr<ModbusPort> commPort){m_commPort = commPort;};
+  virtual void SetDataMutex(std::shared_ptr<std::mutex> mutex){m_data.dataMutex = mutex;}
 
 private:
   static constexpr int cellVoltagesBaseReg = 0;
@@ -100,6 +103,7 @@ private:
   float m_actualPower;
   CatchpennyState m_state;
   std::shared_ptr<ModbusServer> m_server;
+  std::mutex m_mutex;
   void DoCellProtectionLogic();
 public:
   Catchpenny(){}
@@ -111,6 +115,9 @@ public:
   bool UpdateControl();
   void SetPowerSetpoint(float powerSetpoint);
   void SafetyShutDown();
+
+  /* Getter functions for the datastructures */
+
 };
 
 #endif //CATCHPENNY_HPP

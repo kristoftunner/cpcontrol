@@ -15,7 +15,10 @@ public:
    * @param topic 
    * @param message 
    */
-  void ParseMessage(std::string& topic, std::string& message);
+  std::map<std::string,std::string> ParseMessage(std::string& topic, std::string& message);
+private:
+  std::shared_ptr<Catchpenny> m_catchpenny; 
+  std::shared_ptr<DeviceContainer> m_container; /*container containing all the devices -> get the device data structures from this */
 };
 
 class AtParser {
@@ -37,8 +40,6 @@ public:
 private:
   AtParser m_atParser;
   MqttResponder m_responder;
-  std::shared_ptr<Catchpenny> m_catchpenny; 
-  std::shared_ptr<DeviceContainer> m_container; /*container containing all the devices -> get the device data structures from this */
 };
 
 void MqttInterface::Process()
