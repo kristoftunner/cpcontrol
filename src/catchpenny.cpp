@@ -268,9 +268,13 @@ const Cell& Battery::GetCell(int index)
   return m_cells[index];
 }
 
-const BatteryPackMetaData& Battery::GetBatterMetaData()
+const BatteryPackMetaData Battery::GetBatterMetaData()
 {
-  return m_data;
+  BatteryPackMetaData data;
+  m_data.dataMutex->lock_shared();
+  data = m_data;
+  m_data.dataMutex->unlock_shared();
+  return data;
 }
 
 int Battery::ReadMeasurements()
@@ -311,6 +315,9 @@ int Battery::ReadMeasurements()
     stateOfCharge += (m_batteryCapacity / m_cells.size()) * cell.capacity;
   
   m_data.stateOfCharge = stateOfCharge;
+  m_data.dataMutex->lock();
+  /* fill out meta data*/
+  m_data.dataMutex->unlock();
   return 0;
 }
 

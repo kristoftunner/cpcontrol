@@ -36,7 +36,7 @@ public:
     voltageAcPhase3(0),
     frequency(0){}
 
-  std::shared_ptr<std::mutex> dataMutex;
+  std::shared_ptr<std::shared_mutex> dataMutex;
   std::string assetId;
   float powerAcTotal;
   float powerAcPhase1;
@@ -110,7 +110,7 @@ public:
   float inverterTemperature;
   uint32_t inverterStatus;
   uint32_t inverterError;
-  std::shared_ptr<std::mutex> dataMutex;
+  std::shared_ptr<std::shared_mutex> dataMutex;
 };
 
 class BaseDevice
@@ -129,7 +129,7 @@ public:
   virtual int Initialize(json& config) = 0;
   virtual int ReadMeasurements() override {};
   virtual PowerMeterData GetPowerMeterData() {return m_data;};
-  virtual void SetDataMutex(std::shared_ptr<std::mutex> mutex){m_data.dataMutex = mutex;}
+  virtual void SetDataMutex(std::shared_ptr<std::shared_mutex> mutex){m_data.dataMutex = mutex;}
 };
 
 class SchneiderPM5110Meter : public PowerMeterDevice 
@@ -175,9 +175,15 @@ public:
 
   virtual int Initialize(json& config) = 0;
   virtual int ReadMeasurements() override {};
-  virtual InverterData GetInverterData() {return m_data;}
+  virtual InverterData GetInverterData()
+  {
+    InverterData data;
+    m_data.dataMutex->lock_shared();
+    data = m_data;
+    m_data.dataMutex->unlock_shared();
+  }
   virtual void UpdatePower(float powerSetpoint) = 0;
-  virtual void SetDataMutex(std::shared_ptr<std::mutex> mutex){m_data.dataMutex = mutex;}
+  virtual void SetDataMutex(std::shared_ptr<std::shared_mutex> mutex){m_data.dataMutex = mutex;}
 };
 
 class FroniusIgPlus : public InverterDevice {

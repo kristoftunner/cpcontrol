@@ -4,6 +4,7 @@
 #include <memory>
 #include <vector>
 #include <mutex>
+#include <shared_mutex>
 
 #include "device.hpp"
 
@@ -46,7 +47,7 @@ struct BatteryPackMetaData {
   float stateOfCharge = 0;
   uint32_t batteryStatus = 0;
   uint32_t batteryError = 0;
-  std::shared_ptr<std::mutex> dataMutex;
+  std::shared_ptr<std::shared_mutex> dataMutex;
 };
 
 struct CellConfig {
@@ -74,7 +75,7 @@ public:
   float GetAvailableChargeStorage();    // in kWh
   float GetAvailableDischargeStorage(); // in kWh
   void SetCommPort(std::shared_ptr<ModbusPort> commPort){m_commPort = commPort;};
-  virtual void SetDataMutex(std::shared_ptr<std::mutex> mutex){m_data.dataMutex = mutex;}
+  void SetDataMutex(std::shared_ptr<std::shared_mutex> mutex){m_data.dataMutex = mutex;}
 
 private:
   static constexpr int cellVoltagesBaseReg = 0;
@@ -82,10 +83,6 @@ private:
   static constexpr int cellCapacityBaseReg = 110;
 };
 
-class ModbusServer {
-public:
-  ModbusServer(){};
-};
 /**
  * @brief class for controlling the catchpenny with the following functions:
  *  - UpdatePower()
@@ -103,7 +100,6 @@ private:
   float m_actualPower;
   CatchpennyState m_state;
   std::shared_ptr<ModbusServer> m_server;
-  std::mutex m_mutex;
   void DoCellProtectionLogic();
 public:
   Catchpenny(){}
@@ -117,6 +113,8 @@ public:
   void SafetyShutDown();
 
   /* Getter functions for the datastructures */
+  InverterData GetChargerData(int chargerNumber){return m_chargers[chargerNumber]->GetInverterData();};
+  InverterData GetDischargerData(int dischargerNumber){return m_discharger[dischargerNumber]->GetInverterData();}
 
 };
 
