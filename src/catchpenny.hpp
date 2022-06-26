@@ -79,6 +79,10 @@ private:
   static constexpr int cellCapacityBaseReg = 110;
 };
 
+class ModbusServer {
+public:
+  ModbusServer(){};
+};
 /**
  * @brief class for controlling the catchpenny with the following functions:
  *  - UpdatePower()
@@ -95,6 +99,7 @@ private:
   float m_powerSetpoint;
   float m_actualPower;
   CatchpennyState m_state;
+  std::shared_ptr<ModbusServer> m_server;
   void DoCellProtectionLogic();
 public:
   Catchpenny(){}
