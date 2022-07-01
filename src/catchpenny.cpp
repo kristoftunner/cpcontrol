@@ -1,4 +1,5 @@
 #include <math.h>
+#include <limits>
 
 #include "catchpenny.hpp"
 
@@ -30,7 +31,7 @@ void Catchpenny::ReadMeasurements()
   }
 }
 
-void Catchpenny::SetPowerSetpoint(float powerSetpoint)
+int Catchpenny::SetPowerSetpoint(float powerSetpoint)
 {
   /* TODO: do some error handling */
   if(powerSetpoint < 0 && abs(powerSetpoint) <= m_config.maxDischargingPower)
@@ -38,7 +39,9 @@ void Catchpenny::SetPowerSetpoint(float powerSetpoint)
   else if(powerSetpoint > 0 && abs(powerSetpoint) <= m_config.maxChargingPower)
     m_powerSetpoint = powerSetpoint;
   else
-    ;
+    return 1;
+  
+  return 0;
 }
 
 bool Catchpenny::UpdateControl()
@@ -328,4 +331,214 @@ float Battery::GetAvailableChargeStorage()
 float Battery::GetAvailableDischargeStorage()
 {
   return m_data.stateOfCharge * m_batteryCapacity * 0.01;
+}
+
+void CatchpennyModbusTcpServer::Initialize(const std::string& ip, const std::string& port)
+{
+  /* setup the server and the buffered slave*/
+  m_server.setBackend(Modbus::Tcp, ip, port);
+  m_server.setDebug();
+  m_server.setRecoveryLink();
+  m_bufferSlave = &(m_server.addSlave(10));
+  /* data registers */
+  m_bufferSlave->setBlock(Modbus::InputRegister, 64, 1000);
+  m_bufferSlave->setBlock(Modbus::InputRegister, 42, 1100);
+  m_bufferSlave->setBlock(Modbus::InputRegister, 46, 1200);
+  m_bufferSlave->setBlock(Modbus::HoldingRegister, 3, 2000);
+
+  /* write the constant registers */
+  std::string systemSerialNumber("1001");
+  std::string systemFirmwareVersion("1.0.0");
+  std::string systemModel("CP1.0");
+  std::string systemVersion("1.0.0");
+  m_bufferSlave->writeInputRegisters(1, reinterpret_cast<uint16_t*>(systemSerialNumber.data()), systemSerialNumber.size() / 2); 
+  m_bufferSlave->writeInputRegisters(16, reinterpret_cast<uint16_t*>(systemFirmwareVersion.data()), systemFirmwareVersion.size() / 2); 
+  m_bufferSlave->writeInputRegisters(32, reinterpret_cast<uint16_t*>(systemModel.data()), systemModel.size() / 2); 
+  m_bufferSlave->writeInputRegisters(48, reinterpret_cast<uint16_t*>(systemVersion.data()), systemVersion.size() / 2); 
+  m_bufferSlave->writeRegister(1100, 3); // Inverter phase
+  m_bufferSlave->writeRegister(1101, 0); // Inverter type 
+}
+
+void CatchpennyModbusTcpServer::Process()
+{
+  if(m_server.isOpen())
+  {
+    do {
+      /* TODO: do the heartbeat logic here */
+      Modbus::Data<float> powerSetPoint;
+      m_bufferSlave->readRegister(AC_POWER_REQUEST, powerSetPoint);
+      if(powerSetPoint.value() != powerSetPoint)
+      {
+        if(m_catchpenny->SetPowerSetpoint(powerSetPoint) == 0)
+          m_catchpennyPowerSetpoint = powerSetPoint;
+        else
+          m_bufferSlave->writeRegister(AC_POWER_REQUEST, Modbus::Data<float>{m_catchpennyPowerSetpoint});
+      }
+
+      UpdateRegisters();
+    }
+    while(m_server.isOpen());
+  }
+}
+
+void CatchpennyModbusTcpServer::UpdateRegisters()
+{
+  /* extract all the data structures needed for the registers -> update the registers */
+  CatchpennyConfig cpConfig = m_catchpenny->GetCpConfig();
+  std::vector<InverterData> chargerData;
+  std::vector<InverterData> dischargerData;
+  for(int i = 0; i < m_catchpenny->GetNumberOfChargers(); i++)
+  {
+    chargerData.push_back(m_catchpenny->GetChargerData(i));
+  }
+  
+  for(int i = 0; i < m_catchpenny->GetNumberOfDischargers(); i++)
+  {
+    dischargerData.push_back(m_catchpenny->GetDischargerData(i));
+  }
+
+  /* actually update the registers */
+  if(chargerData.size() >= 2 && dischargerData.size() >= 2)
+  {
+    /* status registers update */
+    /* TODO: revisit those status and error registers */
+    Modbus::Data<uint32_t> inverterStatusData[4] = {dischargerData[0].inverterStatus,dischargerData[0].inverterError,chargerData[0].inverterStatus,chargerData[0].inverterError};
+    m_bufferSlave->writeInputRegisters(DISCHARGING_INVERTER_STAT_REG, inverterStatusData, 4);
+    
+    /* update inverter data registers */
+    /* TODO: check concurrency */
+    float inverterPac = 0;
+    float inverterP1 = 0;
+    float inverterP2 = 0;
+    float inverterP3 = 0;
+    float voltageL1 = 0;
+    float voltageL2 = 0;
+    float voltageL3 = 0;
+    float currentL1 = 0;
+    float currentL2 = 0;
+    float currentL3 = 0;
+    float acFrequency = 0;
+    float dischargingInvTemperature = 0;
+    float chargingInvTemperature = 0;
+
+    auto calulateRegisters = [&](const InverterData data){
+      inverterPac += data.powerAcTotal;
+      inverterP1 += data.powerAcPhase1;
+      inverterP2 += data.powerAcPhase2;
+      inverterP3 += data.powerAcPhase3;
+      voltageL1 += data.voltageAcPhase1 / chargerData.size();
+      voltageL2 += data.voltageAcPhase2 / chargerData.size();
+      voltageL3 += data.voltageAcPhase3 / chargerData.size();
+      currentL1 += data.currentAcPhase1;
+      currentL2 += data.currentAcPhase2;
+      currentL3 += data.currentAcPhase3;
+      acFrequency += data.frequency / chargerData.size();
+    };
+    if(m_catchpenny->GetState() == CatchpennyState::CATCHPENNY_CHARGE)
+    {
+      /* count a mean value from the chargers */
+      for(const auto& data : chargerData)
+      {
+        calulateRegisters(data);
+        chargingInvTemperature += data.inverterTemperature / chargerData.size();
+      }
+    }
+    else if(m_catchpenny->GetState() == CatchpennyState::CATCHPENNY_DISCHARGE)
+    {
+      for(const auto& data : dischargerData)
+      {
+        calulateRegisters(data);
+        dischargingInvTemperature += data.inverterTemperature / chargerData.size();
+      }
+    }
+    else  /* halted */
+    {
+
+    }
+
+    Modbus::Data<float> inverterMeasurements[16] = {
+      inverterPac, inverterP1, inverterP2, inverterP3,
+      voltageL1, voltageL2, voltageL3,
+      0.f,0.f,0.f,  /* line voltages are not measured */
+      currentL1, currentL2, currentL3,
+      acFrequency, dischargingInvTemperature, chargingInvTemperature 
+    };
+    m_bufferSlave->writeInputRegisters(INVERTER_PAC_REG, inverterMeasurements, 16);
+
+    /* Update battery registers */
+    std::vector<BatteryPackMetaData> batteryData;
+    for(int i = 0; i < m_catchpenny->GetNumberOfBatteries(); i++)
+      batteryData.push_back(m_catchpenny->GetBatteryData(i));
+    
+    if(batteryData.size() == 2)
+    {
+      Modbus::Data<uint32_t> batterStatus[2] = {batteryData[0].batteryStatus, batteryData[0].batteryError};
+      m_bufferSlave->writeInputRegisters(BATTERY_STATUS_REG, batterStatus, 2);
+
+      CatchpennyConfig config = m_catchpenny->GetCpConfig();
+      Modbus::Data<float> cpConfigReg[4] = {config.maxChargeVoltage, config.minDischargeVoltage,
+                                        config.maxChargeCurrent, config.maxDischargeCurrent};
+      m_bufferSlave->writeInputRegisters(BATTERY_MAX_CHARGE_VOLTAGE_REG, cpConfigReg, 4);
+      /* TODO: clarify battery modes */
+      Modbus::Data<uint32_t> batteryMode[1] = {0};
+      m_bufferSlave->writeInputRegisters(BATTERY_MODE, batteryMode, 1);
+
+      float stateOfCharge = 0;
+      float storedEnergy = 0;
+      float stateOfHealth = 0;
+      float maxCellTemperature = std::numeric_limits<float>::min();
+      float minCellTemperature = std::numeric_limits<float>::max();
+      float averageCellTemperature = 0;
+      float stackTemperature = 0;
+      float maxCellVoltage = std::numeric_limits<float>::min();
+      float minCellVoltage = std::numeric_limits<float>::max();
+      float averageCellVoltage = 0;
+      float stackVoltage = 0;
+      float stackCurrent = 0;
+      for(const auto& battery : batteryData)
+      {
+        stateOfCharge += battery.stateOfCharge / batteryData.size();
+        stateOfHealth += battery.stateOfHealth / batteryData.size(); /* TODO: revisit this one */
+        storedEnergy += battery.storedEnergy;
+        maxCellTemperature = battery.maxCellTemperature > maxCellTemperature ? battery.maxCellTemperature : maxCellTemperature;
+        minCellTemperature = battery.minCellTemperature < minCellTemperature ? battery.minCellTemperature : minCellTemperature;
+        averageCellTemperature += battery.averageCellTemperature / batteryData.size();
+        stackTemperature = averageCellTemperature;
+        maxCellVoltage = battery.maxCellVoltage > maxCellVoltage ? battery.maxCellVoltage : maxCellVoltage;
+        minCellVoltage = battery.minCellVoltage < minCellVoltage ? battery.minCellVoltage : minCellVoltage;
+        averageCellVoltage += battery.averageCellVoltage / batteryData.size();
+        if(m_catchpenny->GetState() == CatchpennyState::CATCHPENNY_CHARGE)
+        {
+          for(const auto& charger : chargerData)
+          {
+            stackVoltage += charger.voltageDc / chargerData.size();
+            stackCurrent += charger.currentDc / chargerData.size();
+          }
+        }
+        else if(m_catchpenny->GetState() == CatchpennyState::CATCHPENNY_DISCHARGE)
+        {
+          for(const auto& discharger : dischargerData)
+          {
+            stackVoltage += discharger.voltageDc / chargerData.size();
+            stackCurrent += discharger.currentDc / chargerData.size();
+          }
+        }
+      }
+
+      Modbus::Data<float> batteryMeasurements[12] = {
+        stateOfCharge, storedEnergy, stateOfHealth,
+        maxCellTemperature, minCellTemperature, averageCellTemperature, stackTemperature,
+        maxCellVoltage, minCellVoltage, averageCellVoltage, stackVoltage, stackCurrent
+      };
+      m_bufferSlave->writeInputRegisters(BATTERY_STATE_OF_CHARGE, batteryMeasurements, 12);
+
+      /* assume that all the batteries are configured the same */
+      Modbus::Data<float> batteryConfigReg[4] = {
+        cpConfig.maxChargeCurrent, cpConfig.maxDischargeCurrent, cpConfig.maxDischargingPower, cpConfig.maxDischargingPower};
+      
+      m_bufferSlave->writeInputRegisters(MAX_CHARGING_DC_CURRENT_REG, batteryConfigReg, 4);
+    }
+  } 
+  else
+    return;
 }

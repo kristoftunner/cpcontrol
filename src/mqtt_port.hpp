@@ -6,15 +6,15 @@
 
 #include "catchpenny.hpp"
 
+/**
+ * @brief this class responds to the 
+ * 
+ */
 class MqttResponder {
 public:
   MqttResponder(){}
-  /**
-   * @brief 
-   * 
-   * @param topic 
-   * @param message 
-   */
+  
+  /* implement here all the topics needed */
   std::map<std::string,std::string> ParseMessage(std::string& topic, std::string& message);
 private:
   std::shared_ptr<Catchpenny> m_catchpenny; 

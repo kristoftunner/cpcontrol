@@ -21,16 +21,3 @@ target_link_libraries(cpcontrol
   modbuspp
   ${MODBUSPP_LIBRARIES}
 )
-
-add_executable(sandbox_app
-  sandbox.cpp
-)
-
-target_link_libraries(sandbox_app
-  PUBLIC
-  cpcontrol
-  ${MODBUSPP_LIBRARIES}
-)
-target_include_directories(sandbox_app
-  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
-)

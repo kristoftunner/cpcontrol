@@ -13,7 +13,7 @@ private:
   std::unique_ptr<Modbus::Master> m_modbus;
 public:
   ModbusPort(){}
-  bool Initialize(json& jsonInput);
+  bool Initialize(const json& jsonInput);
   void AddSlave(int address);
   
   template<class T>
@@ -69,16 +69,5 @@ bool ModbusPort::WriteHoldingRegister(int baseAddress, std::vector<T> values, in
     return false;
 }
 
-/**
- * @brief class containing the register interface of the catchpenny system
- * 
- */
-class CatchpennyTcpRegisterMap {
-public:
-  ModbusTcpRegisterMap() = default;
-  void UpdateRegisters();
-private:
-  std::shared_ptr<Catchpenny> m_catchpenny;
-};
 
 #endif //DEVICE_COMM_HPP

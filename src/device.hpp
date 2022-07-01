@@ -4,6 +4,7 @@
 #include <iostream>
 #include <vector>
 #include <map>
+#include <shared_mutex>
 
 #include "device_comm.hpp"
 
@@ -15,95 +16,54 @@ enum class Devicetype {
 
 struct PowerMeterData {
 public:
-  PowerMeterData() : 
-    powerAcTotal(0),
-    powerAcPhase1(0),
-    powerAcPhase2(0),
-    powerAcPhase3(0),
-    apparentPowerTotal(0),
-    apparentPowerPhase1(0),
-    apparentPowerPhase2(0),
-    apparentPowerPhase3(0),
-    reactivePowerTotal(0),
-    reactivePowerPhase1(0),
-    reactivePowerPhase2(0),
-    reactivePowerPhase3(0),
-    currentAcPhase1(0),
-    currentAcPhase2(0),
-    currentAcPhase3(0),
-    voltageAcPhase1(0),
-    voltageAcPhase2(0),
-    voltageAcPhase3(0),
-    frequency(0){}
+  PowerMeterData(){} 
 
   std::shared_ptr<std::shared_mutex> dataMutex;
   std::string assetId;
-  float powerAcTotal;
-  float powerAcPhase1;
-  float powerAcPhase2;
-  float powerAcPhase3;
+  float powerAcTotal = 0;
+  float powerAcPhase1 = 0;
+  float powerAcPhase2 = 0;
+  float powerAcPhase3 = 0;
   
-  float apparentPowerTotal;
-  float apparentPowerPhase1;
-  float apparentPowerPhase2;
-  float apparentPowerPhase3;
+  float apparentPowerTotal = 0;
+  float apparentPowerPhase1 = 0;
+  float apparentPowerPhase2 = 0;
+  float apparentPowerPhase3 = 0;
   
-  float reactivePowerTotal;
-  float reactivePowerPhase1;
-  float reactivePowerPhase2;
-  float reactivePowerPhase3;
+  float reactivePowerTotal = 0;
+  float reactivePowerPhase1 = 0;
+  float reactivePowerPhase2 = 0;
+  float reactivePowerPhase3 = 0;
   
-  float currentAcPhase1;
-  float currentAcPhase2;
-  float currentAcPhase3;
-  float voltageAcPhase1; 
-  float voltageAcPhase2; 
-  float voltageAcPhase3; 
+  float currentAcPhase1 = 0;
+  float currentAcPhase2 = 0;
+  float currentAcPhase3 = 0;
+  float voltageAcPhase1 = 0; 
+  float voltageAcPhase2 = 0; 
+  float voltageAcPhase3 = 0; 
 
-  float frequency;
+  float frequency = 0;
 };
 
 struct InverterData {
 public:
-  InverterData(){
-    powerDc = 0;
-    currentDc = 0;
-    voltageDc = 0;
-
-    powerAcTotal = 0;
-    powerAcPhase1 = 0;
-    powerAcPhase2 = 0;
-    powerAcPhase3 = 0;
-
-    currentAcPhase1 = 0;
-    currentAcPhase2 = 0;
-    currentAcPhase3 = 0;
-    voltageAcPhase1 = 0; 
-    voltageAcPhase2 = 0; 
-    voltageAcPhase3 = 0; 
-
-    inverterTemperature = 0;
-    inverterStatus = 0;
-    inverterError = 0;
-    frequency = 0;
-  }
   std::string assetId;
-  float powerDc;
-  float currentDc;
-  float voltageDc;
+  float powerDc = 0;
+  float currentDc = 0;
+  float voltageDc = 0;
 
-  float powerAcTotal;
-  float powerAcPhase1;
-  float powerAcPhase2;
-  float powerAcPhase3;
-  float powerFactor;
+  float powerAcTotal = 0;
+  float powerAcPhase1 = 0;
+  float powerAcPhase2 = 0;
+  float powerAcPhase3 = 0;
+  float powerFactor = 0;
 
-  float currentAcPhase1;
-  float currentAcPhase2;
-  float currentAcPhase3;
-  float voltageAcPhase1; 
-  float voltageAcPhase2; 
-  float voltageAcPhase3; 
+  float currentAcPhase1 = 0;
+  float currentAcPhase2 = 0;
+  float currentAcPhase3 = 0;
+  float voltageAcPhase1 = 0; 
+  float voltageAcPhase2 = 0; 
+  float voltageAcPhase3 = 0; 
 
   float frequency;
 
@@ -126,7 +86,7 @@ protected:
   PowerMeterData m_data;
 public:
   PowerMeterDevice() {m_type = Devicetype::powerMeter;}
-  virtual int Initialize(json& config) = 0;
+  virtual int Initialize(const json& config) = 0;
   virtual int ReadMeasurements() override {};
   virtual PowerMeterData GetPowerMeterData() {return m_data;};
   virtual void SetDataMutex(std::shared_ptr<std::shared_mutex> mutex){m_data.dataMutex = mutex;}
@@ -160,7 +120,7 @@ private:
   int m_address;
 public:
   SchneiderPM5110Meter(){m_type = Devicetype::powerMeter;}
-  virtual int Initialize(json& config) override;
+  virtual int Initialize(const json& config) override;
   virtual int ReadMeasurements() override;
   virtual PowerMeterData GetPowerMeterData() {return m_data;}
 
@@ -173,14 +133,15 @@ protected:
 public:
   InverterDevice() {m_type = Devicetype::inverter;}
 
-  virtual int Initialize(json& config) = 0;
-  virtual int ReadMeasurements() override {};
+  virtual int Initialize(const json& config) = 0;
+  virtual int ReadMeasurements() override {return 0;};
   virtual InverterData GetInverterData()
   {
     InverterData data;
     m_data.dataMutex->lock_shared();
     data = m_data;
     m_data.dataMutex->unlock_shared();
+    return data;
   }
   virtual void UpdatePower(float powerSetpoint) = 0;
   virtual void SetDataMutex(std::shared_ptr<std::shared_mutex> mutex){m_data.dataMutex = mutex;}
@@ -201,7 +162,7 @@ private:
   static constexpr int dcValues2Base = 40292;
 public:
   FroniusIgPlus(){}
-  virtual int Initialize(json& config) override;
+  virtual int Initialize(const json& config) override;
   virtual int ReadMeasurements() override;
   virtual void UpdatePower(float powerSetpoint) override;
 
@@ -222,7 +183,7 @@ private:
   static constexpr int waterTemperatureBase = 206;
 public:
   Tesla(){}
-  virtual int Initialize(json& config) override;
+  virtual int Initialize(const json& config) override;
   virtual int ReadMeasurements() override;
   virtual void UpdatePower(float powerSetpoint) override;
 

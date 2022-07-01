@@ -44,6 +44,7 @@ struct BatteryPackMetaData {
   float maxCellCapacity = 0;
   float averageCellCapacity = 0;
   float stateOfHealth = 0;
+  float storedEnergy = 0;
   float stateOfCharge = 0;
   uint32_t batteryStatus = 0;
   uint32_t batteryError = 0;
@@ -70,10 +71,13 @@ public:
   bool CheckOverTemperature();
   bool CheckUnderTemperature();
   const Cell& GetCell(int index);
-  const BatteryPackMetaData& GetBatterMetaData();
   int ReadMeasurements();
+
+  /* Getters and setter */
   float GetAvailableChargeStorage();    // in kWh
   float GetAvailableDischargeStorage(); // in kWh
+  const BatteryPackMetaData GetBatterMetaData();
+  CellConfig GetCellConfig(){return m_cellConfig;}
   void SetCommPort(std::shared_ptr<ModbusPort> commPort){m_commPort = commPort;};
   void SetDataMutex(std::shared_ptr<std::shared_mutex> mutex){m_data.dataMutex = mutex;}
 
@@ -99,7 +103,6 @@ private:
   float m_powerSetpoint;
   float m_actualPower;
   CatchpennyState m_state;
-  std::shared_ptr<ModbusServer> m_server;
   void DoCellProtectionLogic();
 public:
   Catchpenny(){}
@@ -109,13 +112,48 @@ public:
   void AppendBattery(Battery battery){m_battery.push_back(battery);}
   void ReadMeasurements();
   bool UpdateControl();
-  void SetPowerSetpoint(float powerSetpoint);
+  int SetPowerSetpoint(float powerSetpoint);
   void SafetyShutDown();
 
   /* Getter functions for the datastructures */
   InverterData GetChargerData(int chargerNumber){return m_chargers[chargerNumber]->GetInverterData();};
-  InverterData GetDischargerData(int dischargerNumber){return m_discharger[dischargerNumber]->GetInverterData();}
+  InverterData GetDischargerData(int dischargerNumber){return m_dischargers[dischargerNumber]->GetInverterData();}
+  BatteryPackMetaData GetBatteryData(int batteryNumber){return m_battery[batteryNumber].GetBatterMetaData();}
+  int GetNumberOfChargers(){return m_chargers.size();}
+  int GetNumberOfDischargers(){return m_dischargers.size();}
+  int GetNumberOfBatteries(){return m_battery.size();}
+  CellConfig GetBatteryCellConfig(int batteryNumber){return m_battery[batteryNumber].GetCellConfig();}
 
+  CatchpennyConfig GetCpConfig(){return m_config;}
+  CatchpennyState GetState(){return m_state;}
+};
+
+/**
+ * @brief class containing the register interface of the catchpenny system
+ * 
+ */
+class CatchpennyModbusTcpServer {
+public:
+  CatchpennyModbusTcpServer(){}
+  void UpdateRegisters();
+  void Process();
+  void Initialize(const std::string& ip, const std::string& port);
+  void SetCatchpenny(std::shared_ptr<Catchpenny> catchpenny){m_catchpenny = catchpenny;}
+private:
+  std::shared_ptr<Catchpenny> m_catchpenny;
+  Modbus::Server m_server;
+  Modbus::BufferedSlave *m_bufferSlave;
+  float m_catchpennyPowerSetpoint = 0;
+private:
+  static constexpr int INVERTER_PHASE_REG = 1100;
+  static constexpr int DISCHARGING_INVERTER_STAT_REG = 1102;
+  static constexpr int INVERTER_PAC_REG = 1110;
+  static constexpr int BATTERY_STATUS_REG = 1200;
+  static constexpr int BATTERY_MAX_CHARGE_VOLTAGE_REG = 1204;
+  static constexpr int BATTERY_MODE = 1212;
+  static constexpr int BATTERY_STATE_OF_CHARGE = 1214;
+  static constexpr int MAX_CHARGING_DC_CURRENT_REG = 1238;
+  static constexpr int AC_POWER_REQUEST = 2000;
 };
 
 #endif //CATCHPENNY_HPP

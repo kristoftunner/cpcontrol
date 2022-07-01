@@ -14,8 +14,8 @@
     {
     "name" : "modbustcp1",
     "mode": "tcp",
-    "connection": "localhost",
-    "port": "1502",
+    "host": "localhost",
+    "port": "502",
     "recovery-link": true,
     "debug": true,
     "response-timeout": 500,

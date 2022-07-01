@@ -1,6 +1,6 @@
 #include "device.hpp"
 
-int SchneiderPM5110Meter::Initialize(json& config) 
+int SchneiderPM5110Meter::Initialize(const json& config) 
 {
   m_address = config.at("address").get<int>();
   return 0;
@@ -58,7 +58,7 @@ int SchneiderPM5110Meter::ReadMeasurements()
   return 0;      
 }
 
-int FroniusIgPlus::Initialize(json& config)
+int FroniusIgPlus::Initialize(const json& config)
 {
   m_address = config.at("address").get<int>();
   return 0;
@@ -135,7 +135,7 @@ void FroniusIgPlus::UpdatePower(float powerSetpoint)
   return ;
 }
 
-int Tesla::Initialize(json& config)
+int Tesla::Initialize(const json& config)
 {
   m_address = config.at("address").get<int>();
   return 0;

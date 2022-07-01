@@ -1,6 +1,6 @@
 #include "device_comm.hpp"
 
-bool ModbusPort::Initialize(json& jsonInput)
+bool ModbusPort::Initialize(const json& jsonInput)
 {
   /* the following parameters of ModbusMaster should be set:
   * - mode, settings, connection -> via the constructor - required

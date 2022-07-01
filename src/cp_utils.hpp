@@ -27,6 +27,7 @@ public:
   bool LoadJsonFromString(std::string jsonInput)
   {
     m_jsonConfig = json::parse(jsonInput);
+    return true;
   }
   json GetJsonConfig(){return m_jsonConfig;}
 };

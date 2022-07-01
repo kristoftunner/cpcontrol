@@ -20,13 +20,14 @@ class Enerman {
 private:
   DeviceContainer m_deviceContainer;
   std::map<std::string, std::shared_ptr<ModbusPort>> m_modbusCommPortMap;
-  Catchpenny m_catchpenny;
+  std::shared_ptr<Catchpenny> m_catchpenny;
+  CatchpennyModbusTcpServer m_catchpennyModbusServer;
 public:
   Enerman(){}
-  EnermanReturnCode BuildDevices(json devicesConfig);
+  EnermanReturnCode BuildDevices(const json& devicesConfig);
   EnermanReturnCode Execute();
   EnermanReturnCode ExtractMeasurements();
-  int SetupCatchpenny(json& config);
+  int SetupCatchpenny(const json& config);
 };
 
 #endif //ENERMAN_HPP
