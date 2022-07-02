@@ -5,11 +5,7 @@
     "mode" : "rtu",
     "port": "/dev/ttyS1",
     "settings": "38400E1",
-    "debug": true,
-    "responseTimeout": 500,
-    "byteTimeout": 500,
-    "serialMode": "rs485",
-    "rts": "rtsDown"
+    "debug": true
     },
     {
     "name" : "modbustcp1",

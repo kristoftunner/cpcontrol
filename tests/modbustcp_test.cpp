@@ -106,8 +106,8 @@ int main (int argc, char **argv) {
     srv.setDebug();
     srv.setRecoveryLink();
 
-    BufferedSlave & slv = srv.addSlave (SlaveAddress); // Adding a new slave to the server
-    cout << "Slave id: " << slv.number() << endl << endl;
+    BufferedSlave * slv = &(srv.addSlave (SlaveAddress)); // Adding a new slave to the server
+    cout << "Slave id: " << slv->number() << endl << endl;
     if (srv.debug()) {
       cout << "Mapping of registers:" << endl
            << "--- Input Registers" << endl
@@ -132,11 +132,12 @@ int main (int argc, char **argv) {
     /* --- Holding Registers
      @ Reg.  Size    Description
      1       32-bit  number of seconds to add to UTC to get local time, signed */
-    slv.setBlock (InputRegister, 16, 0);
+    slv->setBlock (InputRegister, 16, 1000);
 
     std::string systemSerialNumber("1023");
-    slv.writeInputRegisters(1,myData, 4);
-    //slv.writeRegisters(1, reinterpret_cast<uint16_t*>(systemSerialNumber.data()), systemSerialNumber.size()/2);
+    //slv->writeInputRegisters(1000,myData, 4);
+    size_t size = systemSerialNumber.size();
+    int ret = slv->writeInputRegisters(1005, reinterpret_cast<uint16_t*>(systemSerialNumber.data()), systemSerialNumber.size()/2);
 
     if (srv.open ()) { // open a connection
       cout << "Listening server on " <<
@@ -151,10 +152,10 @@ int main (int argc, char **argv) {
           before = now;
 
           // update daylight saving time from holding register
-          slv.readCoil (1, daylight);
+          slv->readCoil (1, daylight);
 
           // update GMT offset from holding register
-          slv.readRegister (1, gmtoff);
+          slv->readRegister (1, gmtoff);
 
           // calculate the epoch time
           now += (daylight ? 3600 : 0) + gmtoff;
@@ -170,7 +171,7 @@ int main (int argc, char **argv) {
           mb_time[7] = t->tm_yday + 1;
 
           // update the input registers
-          slv.writeInputRegisters (1, mb_time, 8);
+          slv->writeInputRegisters (1, mb_time, 8);
         }*/
 
         srv.poll (100);

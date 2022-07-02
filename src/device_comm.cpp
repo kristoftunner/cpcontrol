@@ -11,32 +11,39 @@ bool ModbusPort::Initialize(const json& jsonInput)
   */
   if(jsonInput.at("mode") == "rtu")
   {
-    auto port = jsonInput.at("port").get<std::string>();
-    auto settings = jsonInput.at("settings").get<std::string>();
+    const auto& port = jsonInput.at("port").get<std::string>();
+    const auto& settings = jsonInput.at("settings").get<std::string>();
     m_modbus = std::make_unique<Modbus::Master>(Modbus::Rtu, port, settings);
     
-    auto serialMode = jsonInput.at("serialMode").get<std::string>();
-    Modbus::SerialMode serialModeconfig;    
-    if(serialMode == "rs232")
-      serialModeconfig = Modbus::Rs232;
-    else if(serialMode == "rs485")
-      serialModeconfig = Modbus::Rs485;
-    else
-      return false;
+    if(jsonInput.contains("serialMode")) /* optional parameter*/
+    {
+      auto serialMode = jsonInput.at("serialMode").get<std::string>();
+      Modbus::SerialMode serialModeconfig;    
+      if(serialMode == "rs232")
+        serialModeconfig = Modbus::Rs232;
+      else if(serialMode == "rs485")
+        serialModeconfig = Modbus::Rs485;
+      else
+        return false;
+      
+      m_modbus->rtu().setSerialMode(serialModeconfig);
+    }
     
-    auto rts = jsonInput.at("rts").get<std::string>();
-    Modbus::SerialRts rtsConfig;
-    if(rts == "rtsNone")
-      rtsConfig = Modbus::RtsNone;
-    else if(rts =="rtsUp")
-      rtsConfig = Modbus::RtsUp;
-    else if(rts == "rtsDown")
-      rtsConfig = Modbus::RtsDown;
-    else 
-      return false;
-    
-    m_modbus->rtu().setRts(rtsConfig);
-    m_modbus->rtu().setSerialMode(serialModeconfig);
+    if(jsonInput.contains("rts")) /* optional parameter */
+    {
+      auto rts = jsonInput.at("rts").get<std::string>();
+      Modbus::SerialRts rtsConfig;
+      if(rts == "rtsNone")
+        rtsConfig = Modbus::RtsNone;
+      else if(rts =="rtsUp")
+        rtsConfig = Modbus::RtsUp;
+      else if(rts == "rtsDown")
+        rtsConfig = Modbus::RtsDown;
+      else 
+        return false;
+
+      m_modbus->rtu().setRts(rtsConfig);
+    }
 
     if(jsonInput.contains("responseTimeout"))
     {

@@ -341,27 +341,25 @@ void CatchpennyModbusTcpServer::Initialize(const std::string& ip, const std::str
   m_server.setRecoveryLink();
   m_bufferSlave = &(m_server.addSlave(10));
   /* data registers */
-  m_bufferSlave->setBlock(Modbus::InputRegister, 64, 1000);
-  m_bufferSlave->setBlock(Modbus::InputRegister, 42, 1100);
-  m_bufferSlave->setBlock(Modbus::InputRegister, 46, 1200);
-  m_bufferSlave->setBlock(Modbus::HoldingRegister, 3, 2000);
+  int ret = m_bufferSlave->setBlock(Modbus::InputRegister, 246, 1000);
+  ret = m_bufferSlave->setBlock(Modbus::HoldingRegister, 3, 2000);
 
   /* write the constant registers */
   std::string systemSerialNumber("1001");
   std::string systemFirmwareVersion("1.0.0");
   std::string systemModel("CP1.0");
   std::string systemVersion("1.0.0");
-  m_bufferSlave->writeInputRegisters(1, reinterpret_cast<uint16_t*>(systemSerialNumber.data()), systemSerialNumber.size() / 2); 
-  m_bufferSlave->writeInputRegisters(16, reinterpret_cast<uint16_t*>(systemFirmwareVersion.data()), systemFirmwareVersion.size() / 2); 
-  m_bufferSlave->writeInputRegisters(32, reinterpret_cast<uint16_t*>(systemModel.data()), systemModel.size() / 2); 
-  m_bufferSlave->writeInputRegisters(48, reinterpret_cast<uint16_t*>(systemVersion.data()), systemVersion.size() / 2); 
-  m_bufferSlave->writeRegister(1100, 3); // Inverter phase
-  m_bufferSlave->writeRegister(1101, 0); // Inverter type 
+  ret = m_bufferSlave->writeInputRegisters(1001, reinterpret_cast<const uint16_t*>(systemSerialNumber.data()), systemSerialNumber.size() / 2); 
+  ret = m_bufferSlave->writeInputRegisters(1017, reinterpret_cast<uint16_t*>(systemFirmwareVersion.data()), systemFirmwareVersion.size() / 2); 
+  ret = m_bufferSlave->writeInputRegisters(1033, reinterpret_cast<uint16_t*>(systemModel.data()), systemModel.size() / 2); 
+  ret = m_bufferSlave->writeInputRegisters(1049, reinterpret_cast<uint16_t*>(systemVersion.data()), systemVersion.size() / 2); 
+  ret = m_bufferSlave->writeInputRegister(1100, 3); // Inverter phase
+  ret = m_bufferSlave->writeInputRegister(1101, 0); // Inverter type 
 }
 
 void CatchpennyModbusTcpServer::Process()
 {
-  if(m_server.isOpen())
+  if(m_server.open())
   {
     do {
       /* TODO: do the heartbeat logic here */
@@ -376,6 +374,7 @@ void CatchpennyModbusTcpServer::Process()
       }
 
       UpdateRegisters();
+      m_server.poll(100);
     }
     while(m_server.isOpen());
   }

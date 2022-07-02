@@ -1,4 +1,7 @@
 #include "enerman.hpp"
+#include <thread>
+
+using namespace std::chrono_literals;
 
 EnermanReturnCode Enerman::BuildDevices(const json& devicesConfig)
 {
@@ -14,6 +17,9 @@ EnermanReturnCode Enerman::BuildDevices(const json& devicesConfig)
     }
   }
 
+  /* mutex for the devices containted in the containe */
+  std::shared_ptr<std::shared_mutex> containerDataMutex = std::make_shared<std::shared_mutex>();
+
   /* build the device -> append to the container */
   if(devicesConfig.contains("powerMeters"))
   {
@@ -22,10 +28,18 @@ EnermanReturnCode Enerman::BuildDevices(const json& devicesConfig)
       if(powerMeter.at("model") == "schneiderPM5110")
       {
         SchneiderPM5110Meter *device = new SchneiderPM5110Meter();
-        auto commPort = powerMeter.at("interfacePort").get<std::string>();
-        device->SetCommPort(m_modbusCommPortMap[commPort]);
+        const auto& commPort = powerMeter.at("interfacePort").get<std::string>();
+        if(m_modbusCommPortMap.contains(commPort))
+        {
+          device->SetCommPort(m_modbusCommPortMap[commPort]);
+        }
+        else
+        {
+          return EnermanReturnCode::ENERMAN_CONFIG_ERR;
+        }
         if(device->Initialize(powerMeter) == 0)
         {
+          device->SetDataMutex(containerDataMutex);
           PowerMeterDevice *pmDevice = device;
           m_deviceContainer.AppendDevice(pmDevice);
         }
@@ -46,20 +60,27 @@ EnermanReturnCode Enerman::BuildDevices(const json& devicesConfig)
   }
 
   /* setup catchpenny */
-  if(SetupCatchpenny(devicesConfig) != 0)
+  if(SetupCatchpenny(devicesConfig, containerDataMutex) != 0)
     return EnermanReturnCode::ENERMAN_CONFIG_ERR;
   return EnermanReturnCode::ENERMAN_OK;
 }
 
-EnermanReturnCode Enerman::Execute()
+void Enerman::Execute()
 {
-  if(m_deviceContainer.ReadMeasurements<PowerMeterDevice>() == 0)
-    return EnermanReturnCode::ENERMAN_OK;
-  else
-    return EnermanReturnCode::ENERMAN_READ_ERR;
+  while(true)
+  {
+    if(m_deviceContainer.ReadMeasurements<PowerMeterDevice>() == 0)
+      ;
+    else
+      ;
+    /* control the catchpenny */
+    m_catchpenny->ReadMeasurements();
+    m_catchpenny->UpdateControl();
+    std::this_thread::sleep_for(500ms);
+  }
 }
 
-int Enerman::SetupCatchpenny(const json& config)
+int Enerman::SetupCatchpenny(const json& config, std::shared_ptr<std::shared_mutex> mutex)
 {
   CatchpennyConfig cfg = {
     820,
@@ -79,7 +100,7 @@ int Enerman::SetupCatchpenny(const json& config)
   if(config.contains("catchpenny"))
   {
     json deviceConfig = config["catchpenny"];
-    auto commPort = deviceConfig.at("interfacePort").get<std::string>();
+    const auto& commPort = deviceConfig.at("interfacePort").get<std::string>();
     
     /* setup the tesla chargers */
     for(const auto& charger : deviceConfig.at("chargers"))
@@ -87,11 +108,13 @@ int Enerman::SetupCatchpenny(const json& config)
       int address = charger.at("address").get<int>();
       Battery battery = Battery(50000, 80, cellCfg, address);
       battery.SetCommPort(m_modbusCommPortMap[commPort]);
+      battery.SetDataMutex(mutex);
       catchpenny->AppendBattery(battery);
       Tesla *inverter = new Tesla();
       inverter->SetCommPort(m_modbusCommPortMap[commPort]);
       if(inverter->Initialize(charger) == 0)
       {
+        inverter->SetDataMutex(mutex);
         InverterDevice *invDevice = inverter;
         catchpenny->AppendCharger(invDevice);
       }
@@ -101,13 +124,14 @@ int Enerman::SetupCatchpenny(const json& config)
     m_catchpenny = catchpenny;
 
     /* setup the fronius dischargers */
-    for(auto disCharger : deviceConfig.at("dischargers"))
+    for(const auto& disCharger : deviceConfig.at("dischargers"))
     {
       int address = disCharger.at("address").get<int>();
       FroniusIgPlus *inverter = new FroniusIgPlus();
       inverter->SetCommPort(m_modbusCommPortMap[commPort]);
       if(inverter->Initialize(disCharger) == 0)
       {
+        inverter->SetDataMutex(mutex);
         InverterDevice *invDevice = inverter;
         catchpenny->AppendDischarger(invDevice);
       }

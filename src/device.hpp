@@ -219,13 +219,14 @@ template<int (PowerMeterDevice::*functor)()>
 int DeviceContainer::ForEachDevice()
 {
   int containerSize = m_powerMeterContainer.size();
+  int error = 0;
   for(int i = 0; i < containerSize; i++)
   {
     PowerMeterDevice *device = m_powerMeterContainer[i];
-    (device->*functor)();
+    error |= (device->*functor)();
   }
 
-  return 0;
+  return error;
 }
 
 template<int (InverterDevice::*functor)()>

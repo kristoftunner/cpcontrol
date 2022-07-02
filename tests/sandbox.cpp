@@ -1,6 +1,7 @@
 #include <string>
 #include "enerman.hpp"
 #include "cp_utils.hpp"
+#include <thread>
 
 int main()
 {
@@ -12,4 +13,9 @@ int main()
   Enerman manager;
   if(manager.BuildDevices(loader.GetJsonConfig()) != EnermanReturnCode::ENERMAN_OK)
     throw std::runtime_error("something wrongk");
+
+  std::thread catchpennyThread([&](){manager.Execute();});
+  std::thread catchpennyModbusThread([&](){manager.GetCatchpennyModbusServer().Process();});
+  catchpennyThread.join();
+  catchpennyModbusThread.join();
 }

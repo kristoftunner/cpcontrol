@@ -5,17 +5,13 @@
     "mode" : "rtu",
     "port": "/dev/ttyS1",
     "settings": "38400E1",
-    "debug": true,
-    "responseTimeout": 500,
-    "byteTimeout": 500,
-    "serialMode": "rs485",
-    "rts": "rtsDown"
+    "debug": true
     },
     {
     "name" : "modbustcp1",
     "mode": "tcp",
-    "connection": "localhost",
-    "port": "1502",
+    "connection": "127.0.0.1",
+    "port": "502",
     "recovery-link": true,
     "debug": true,
     "response-timeout": 500,
@@ -24,12 +20,12 @@
   ],
   "powerMeters" : [{
     "address" : 2,
-    "interfacePort" : "modbusRTU1",
+    "interfacePort" : "modbusRtu1",
     "manufacturer" : "schneider",
     "model" : "schneiderPM5110"
   }],
   "catchpenny" : {
-    "interfacePort" : "modbusRTU1",
+    "interfacePort" : "modbusRtu1",
     "chargers": [
       {"id" : 0,"address" : 2},
       {"id" : 1, "address" : 3}

@@ -22,12 +22,18 @@ private:
   std::map<std::string, std::shared_ptr<ModbusPort>> m_modbusCommPortMap;
   std::shared_ptr<Catchpenny> m_catchpenny;
   CatchpennyModbusTcpServer m_catchpennyModbusServer;
+  
+  int SetupCatchpenny(const json& config, std::shared_ptr<std::shared_mutex> mutex);
 public:
   Enerman(){}
   EnermanReturnCode BuildDevices(const json& devicesConfig);
-  EnermanReturnCode Execute();
-  EnermanReturnCode ExtractMeasurements();
-  int SetupCatchpenny(const json& config);
+  /**
+   * @brief this function should be run in a separate thread 
+   * 
+   * @return EnermanReturnCode 
+   */
+  void Execute();
+  CatchpennyModbusTcpServer& GetCatchpennyModbusServer(){return m_catchpennyModbusServer;}
 };
 
 #endif //ENERMAN_HPP
