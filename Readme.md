@@ -1,3 +1,8 @@
+## Dependecies, prerequisites:
+- build paho.mqtt.cpp from source: https://github.com/eclipse/paho.mqtt.cpp
+- build and install libmodbus: https://github.com/stephane/libmodbus
+- build and install libmodbuspp: https://github.com/epsilonrt/libmodbuspp
+
 ## Json configuration input example:
 ``` json
 {

@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.12)
 
 find_package(modbuspp REQUIRED)
+find_package(PahoMqttCpp REQUIRED)
 
 add_library(cpcontrol
   STATIC 
@@ -8,6 +9,7 @@ add_library(cpcontrol
   device_comm.cpp
   enerman.cpp
   catchpenny.cpp
+  mqtt_port.cpp
 )
 
 target_include_directories(cpcontrol
@@ -19,5 +21,6 @@ target_include_directories(cpcontrol
 target_link_libraries(cpcontrol
   PUBLIC 
   modbuspp
+  PahoMqttCpp::paho-mqttpp3-static
   ${MODBUSPP_LIBRARIES}
 )
