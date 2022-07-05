@@ -31,7 +31,7 @@ void Catchpenny::ReadMeasurements()
   }
 }
 
-int Catchpenny::SetPowerSetpoint(float powerSetpoint)
+int Catchpenny::SetPowerSetpoint(const float powerSetpoint)
 {
   /* TODO: do some error handling */
   if(powerSetpoint < 0 && abs(powerSetpoint) <= m_config.maxDischargingPower)
@@ -345,14 +345,11 @@ void CatchpennyModbusTcpServer::Initialize(const std::string& ip, const std::str
   ret = m_bufferSlave->setBlock(Modbus::HoldingRegister, 3, 2000);
 
   /* write the constant registers */
-  std::string systemSerialNumber("1001");
-  std::string systemFirmwareVersion("1.0.0");
-  std::string systemModel("CP1.0");
-  std::string systemVersion("1.0.0");
-  ret = m_bufferSlave->writeInputRegisters(1001, reinterpret_cast<const uint16_t*>(systemSerialNumber.data()), systemSerialNumber.size() / 2); 
-  ret = m_bufferSlave->writeInputRegisters(1017, reinterpret_cast<uint16_t*>(systemFirmwareVersion.data()), systemFirmwareVersion.size() / 2); 
-  ret = m_bufferSlave->writeInputRegisters(1033, reinterpret_cast<uint16_t*>(systemModel.data()), systemModel.size() / 2); 
-  ret = m_bufferSlave->writeInputRegisters(1049, reinterpret_cast<uint16_t*>(systemVersion.data()), systemVersion.size() / 2); 
+  const SystemInfo info = m_catchpenny->GetSystemInfo();
+  ret = m_bufferSlave->writeInputRegisters(1001, reinterpret_cast<const uint16_t*>(info.serialNumber.data()), info.serialNumber.size() / 2); 
+  ret = m_bufferSlave->writeInputRegisters(1017, reinterpret_cast<const uint16_t*>(info.firmwareVersion.data()), info.firmwareVersion.size() / 2); 
+  ret = m_bufferSlave->writeInputRegisters(1033, reinterpret_cast<const uint16_t*>(info.systemModel.data()), info.systemModel.size() / 2); 
+  ret = m_bufferSlave->writeInputRegisters(1049, reinterpret_cast<const uint16_t*>(info.systemVersion.data()), info.systemVersion.size() / 2); 
   ret = m_bufferSlave->writeInputRegister(1100, 3); // Inverter phase
   ret = m_bufferSlave->writeInputRegister(1101, 0); // Inverter type 
 }

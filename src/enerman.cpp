@@ -1,10 +1,13 @@
-#include "enerman.hpp"
 #include <thread>
+
+#include "enerman.hpp"
+#include "config.hpp"
 
 using namespace std::chrono_literals;
 
 EnermanReturnCode Enerman::BuildDevices(const json& devicesConfig)
 {
+  m_deviceContainer = std::make_shared<DeviceContainer>();
   /* build the communication ports for the devices */
   if(devicesConfig.contains("commPorts"))
   {
@@ -29,6 +32,8 @@ EnermanReturnCode Enerman::BuildDevices(const json& devicesConfig)
       {
         SchneiderPM5110Meter *device = new SchneiderPM5110Meter();
         const auto& commPort = powerMeter.at("interfacePort").get<std::string>();
+        const auto& assetId = powerMeter.at("assetId").get<std::string>();
+        device->SetAssetId(assetId);
         if(m_modbusCommPortMap.contains(commPort))
         {
           device->SetCommPort(m_modbusCommPortMap[commPort]);
@@ -41,7 +46,7 @@ EnermanReturnCode Enerman::BuildDevices(const json& devicesConfig)
         {
           device->SetDataMutex(containerDataMutex);
           PowerMeterDevice *pmDevice = device;
-          m_deviceContainer.AppendDevice(pmDevice);
+          m_deviceContainer->AppendDevice(pmDevice);
         }
         else
           return EnermanReturnCode::ENERMAN_CONFIG_ERR;
@@ -60,29 +65,31 @@ EnermanReturnCode Enerman::BuildDevices(const json& devicesConfig)
   }
 
   /* setup catchpenny */
-  if(SetupCatchpenny(devicesConfig, containerDataMutex) != 0)
+  if(SetupCatchpenny(devicesConfig.at("catchpenny"), containerDataMutex) != 0)
     return EnermanReturnCode::ENERMAN_CONFIG_ERR;
+  
+  /* setup the mqtt port of the system */
+  MqttMessageResponder responder;
+  responder.SetCathpenny(m_catchpenny);
+  responder.SetContainer(m_deviceContainer);
+  PahoMqttPort port;
+  port.Initailize(catchpenny_config::mqttConfig);
+  port.SetMqttResponder(responder);
+  /* TODO: all the config informations to a config file */
+  port.Subscribe(catchpenny_config::subrscribeTopics);
+  m_port = port;
   return EnermanReturnCode::ENERMAN_OK;
-}
-
-void Enerman::Execute()
-{
-  while(true)
-  {
-    if(m_deviceContainer.ReadMeasurements<PowerMeterDevice>() == 0)
-      ;
-    else
-      ;
-    /* control the catchpenny */
-    m_catchpenny->ReadMeasurements();
-    m_catchpenny->UpdateControl();
-    std::this_thread::sleep_for(500ms);
-  }
 }
 
 int Enerman::SetupCatchpenny(const json& config, std::shared_ptr<std::shared_mutex> mutex)
 {
+  int numberOfChargers,numberOfDischargers;
+  numberOfChargers = config.at("chargers").size();
+  numberOfDischargers = config.at("dischargers").size();
+  
   CatchpennyConfig cfg = {
+    numberOfChargers,
+    numberOfDischargers,
     820,
     450,
     12,
@@ -95,70 +102,84 @@ int Enerman::SetupCatchpenny(const json& config, std::shared_ptr<std::shared_mut
     10000,
     100000
   };
-  CellConfig cellCfg = {45,38,60,5};
-  std::shared_ptr<Catchpenny> catchpenny = std::make_shared<Catchpenny>(cfg);
-  if(config.contains("catchpenny"))
-  {
-    json deviceConfig = config["catchpenny"];
-    const auto& commPort = deviceConfig.at("interfacePort").get<std::string>();
+
+  std::shared_ptr<Catchpenny> catchpenny = std::make_shared<Catchpenny>(cfg, catchpenny_config::systemInfo);
+  m_catchpenny = catchpenny;
+  const auto& commPort = config.at("interfacePort").get<std::string>();
     
-    /* setup the tesla chargers */
-    for(const auto& charger : deviceConfig.at("chargers"))
-    {
-      int address = charger.at("address").get<int>();
-      Battery battery = Battery(50000, 80, cellCfg, address);
-      battery.SetCommPort(m_modbusCommPortMap[commPort]);
-      battery.SetDataMutex(mutex);
-      catchpenny->AppendBattery(battery);
-      Tesla *inverter = new Tesla();
-      inverter->SetCommPort(m_modbusCommPortMap[commPort]);
-      if(inverter->Initialize(charger) == 0)
-      {
-        inverter->SetDataMutex(mutex);
-        InverterDevice *invDevice = inverter;
-        catchpenny->AppendCharger(invDevice);
-      }
-      else
-        return 1;
-    }
-    m_catchpenny = catchpenny;
-
-    /* setup the fronius dischargers */
-    for(const auto& disCharger : deviceConfig.at("dischargers"))
-    {
-      int address = disCharger.at("address").get<int>();
-      FroniusIgPlus *inverter = new FroniusIgPlus();
-      inverter->SetCommPort(m_modbusCommPortMap[commPort]);
-      if(inverter->Initialize(disCharger) == 0)
-      {
-        inverter->SetDataMutex(mutex);
-        InverterDevice *invDevice = inverter;
-        catchpenny->AppendDischarger(invDevice);
-      }
-      else
-        return 1;
-    }
-
-    /* setup the modbusTCP register map */
-  if(config.contains("commPorts"))
+  /* setup the tesla chargers */
+  for(const auto& charger : config.at("chargers"))
   {
-    for(const auto& commPort : config.at("commPorts"))
+    int address = charger.at("address").get<int>();
+    Battery battery = Battery(50000, 80, catchpenny_config::cellCfg, address);
+    battery.SetCommPort(m_modbusCommPortMap[commPort]);
+    battery.SetDataMutex(mutex);
+    catchpenny->AppendBattery(battery);
+    Tesla *inverter = new Tesla();
+    inverter->SetCommPort(m_modbusCommPortMap[commPort]);
+    if(inverter->Initialize(charger) == 0)
     {
-      if(commPort.at("mode").get<std::string>() == "tcp")
-      {
-        const std::string host = commPort.at("connection");
-        const std::string port = commPort.at("port");
-        m_catchpennyModbusServer.Initialize(host, port);
-        m_catchpennyModbusServer.SetCatchpenny(m_catchpenny);
-      }
+      inverter->SetDataMutex(mutex);
+      InverterDevice *invDevice = inverter;
+      catchpenny->AppendCharger(invDevice);
     }
+    else
+      return 1;
   }
+
+  /* setup the fronius dischargers */
+  for(const auto& disCharger : config.at("dischargers"))
+  {
+    int address = disCharger.at("address").get<int>();
+    FroniusIgPlus *inverter = new FroniusIgPlus();
+    inverter->SetCommPort(m_modbusCommPortMap[commPort]);
+    if(inverter->Initialize(disCharger) == 0)
+    {
+      inverter->SetDataMutex(mutex);
+      InverterDevice *invDevice = inverter;
+      catchpenny->AppendDischarger(invDevice);
+    }
+    else
+      return 1;
+  }
+  /* setup the modbusTCP register map */
+  if(config.contains("tcpRegisterInterface"))
+  {
+    const auto& tcpPort = config.at("tcpRegisterInterface");
+    const std::string host = tcpPort.at("host");
+    const std::string port = tcpPort.at("port");
+    m_catchpennyModbusServer.SetCatchpenny(m_catchpenny);
+    m_catchpennyModbusServer.Initialize(host, port);
   }
   else
   {
     return 1;
   }
 
-  m_catchpenny = catchpenny; 
   return 0;
+}
+
+void Enerman::ExecEnergyManagment()
+{
+  while(true)
+  {
+    if(m_deviceContainer->ReadMeasurements<PowerMeterDevice>() == 0)
+      ;
+    else
+      ;
+    /* control the catchpenny */
+    m_catchpenny->ReadMeasurements();
+    m_catchpenny->UpdateControl();
+    std::this_thread::sleep_for(500ms);
+  }
+}
+
+void Enerman::ExecCatchpennyModbusTcp()
+{
+  m_catchpennyModbusServer.Process();
+}
+
+void Enerman::ExecCatchpennyMqtt()
+{
+  m_port.Listen();
 }

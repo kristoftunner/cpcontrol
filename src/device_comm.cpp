@@ -61,7 +61,7 @@ bool ModbusPort::Initialize(const json& jsonInput)
   else if(jsonInput.at("mode") == "tcp")
   {
     auto port = jsonInput.at("port").get<std::string>();
-    auto connection = jsonInput.at("connection").get<std::string>();
+    auto connection = jsonInput.at("host").get<std::string>();
     m_modbus = std::make_unique<Modbus::Master>(Modbus::Tcp, connection, port);
     
     if(jsonInput.contains("responseTimout"))

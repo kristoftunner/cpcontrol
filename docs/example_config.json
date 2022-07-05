@@ -1,0 +1,44 @@
+{
+  "commPorts" : [
+    {
+    "name" : "modbusRtu1",
+    "mode" : "rtu",
+    "port": "/dev/ttyS1",
+    "settings": "38400E1",
+    "debug": true
+    },
+    {
+    "name" : "modbusTcp1",
+    "mode": "tcp",
+    "host": "localhost",
+    "port": "502",
+    "recovery-link": true,
+    "debug": true,
+    "response-timeout": 500,
+    "byte-timeout": 500
+  }
+  ],
+  "powerMeters" : [{
+    "address" : 2,
+    "assetId" : "asdasd",
+    "interfacePort" : "modbusRtu1",
+    "manufacturer" : "schneider",
+    "model" : "schneiderPM5110"
+  }
+  ],
+  "catchpenny" : {
+    "tcpRegisterInterface" : {
+      "host" : "127.0.0.1",
+      "port" : "1200"
+    },
+    "interfacePort" : "modbusRtu1",
+    "chargers": [
+      {"id" : 0,"address" : 2},
+      {"id" : 1, "address" : 3}
+    ],
+    "dischargers": [
+      {"id" : 0, "address" : 4},
+      {"id" : 1, "address" : 5}
+    ]
+  }
+}

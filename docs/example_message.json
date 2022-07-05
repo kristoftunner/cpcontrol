@@ -1,0 +1,186 @@
+// main messages are about:
+//  - Configuration information of the system -> GetConfig -
+//  - Measurement and state information from the inverters
+//  - system status update -
+//  - Cell information: voltage, temperature, capacity
+//  - power request
+//  - system information (version, firmware, id) -
+
+//System info
+// topic: /<catchpenny number>/GetSystemInfo - message from server(server side: PUB)
+// response topic: /<catchpenny number/SystemInfo - message from catchpenny(server side: SUB)
+{
+  "id" : 0,
+  "firmwwareVersion" : "v1.0.0",
+  "systemModel" : "CPV1.0",
+  "serialNumber" : "1001",
+  "systemVersion" : "1.0.0"
+}
+
+//Configuration info - get the system configuration from catchpenny
+// topic: /<catchpenny number>/GetConfigInfo - message from server(server side: PUB)
+// response topic: /<catchpenny number/ConfigInfo - response message from catchpenny(server side: SUB)
+{
+  "id" : 0,
+  "numberOfChargers" : 2,       // number of chargers in the catchpenny system(now it is 2 teslas)
+  "numberOfDischargers" : 2,    // number of dischargers in the catchpenny system(now it is 2 fronius inverters)
+  "maxChargeVoltage" : 601,     // measured in volt [v]
+  "minChargeVoltage" : 450,     // measured in volt [v]
+  "maxChargeCurrent" : 12,      // measured in ampere [A]
+  "minChargeCurrent" : 10,      // measured in ampere [A]
+  "maxDischargeVoltage" : 601,  // measured in volt [V]
+  "minDischargeVoltage" : 450,  // measured in volt [V]
+  "maxDischargeCurrent" : 12,   // measured in ampere [A]
+  "minDischargeCurrent" : 10,   // measured in ampere [A]    
+  "maxChargingPower" : 5000,    // measured in watt [W]
+  "maxDischargingPower" : 6000, // measured in watt[W]
+  "maxStoredEnergy" : 100000    // max stored energy in [kWh]
+}
+
+// Status update message from the server to the catchpenny system - query the status of the system
+// topic:/<catchpenny number>/GetStatusUpdate - message from the server(server side: PUB)
+// response topic:/<catchpenny number>/StatusUpdate - response message from catchpenny(server side: SUB)
+{
+  "id" : 0,
+  "registeredErrors" : 10,                // number of registered errors in the error buffer 
+  "highestCriticalityLevel" : "Warning",  // can be: Info, Debug, Warning, Critical
+}  
+
+// ChargerData - get the measurement and status info from the Nth charger inverter
+// topic: /<catchpenny number>/GetChargerData - message from server(server side: PUB)
+{
+  "id" : 0,
+  "chargerId" : "0"    // the id of the charger you want to get the data from (for example there are 2 tesla chargers)
+}
+// response topic: /<catchpenny number>/ChargerData - response message from catchpenny(server side: SUB)
+{
+  "id" : 0,
+  "chargerId" : 0,		  // ID of the charger, if there are multiple chargers in the system, this number can be incremented
+  "powerAcL1" : 1100,          // phase 1 inverter power   [W]
+  "powerAcL2" : 1100,          // phase 2 inverter power   [W]
+  "powerAcL3" : 1100,          // phase 3 inverter power   [W]
+  "voltageAcL1" : 229.3,    // phase 1 inverter voltage [V]
+  "voltageAcL2" : 229.3,    // phase 2 inverter voltage [V]
+  "voltageAcL3" : 229.3,    // phase 3 inverter voltage [V]
+  "currentAcL1" : 12.2,     // phase 1 inverter current [A]
+  "currentAcL2" : 12.2,     // phase 2 inverter current [A]
+  "currentAcL3" : 12.2,     // phase 3 inverter current [A]
+  "temperature" : 37.8,   // inverter temperature [°C]
+  "acFreqeuncy" : 49.99,  // AC frequency [Hz] 
+  "dcVoltage" : 873.5,    // Voltage of the inverter DC bus [V]
+  "dcCurrent" : 11.2,     // Current of the inverter DC bus [A]
+  "status"    : "STANDBY", // Status of the inverter - enum will be later specified
+  "errorCode" : "NOERROR", // Error code if there is any
+}
+
+// DisChargerData - get the measurement and status info from the discharger inverter
+// topic: /<catchpenny number>/GetDisChargerData - message from server(server side: PUB)
+{
+  "id" : 0,
+  "disChargerId" : "0"    // the id of the discharger you want to get the data from (for example there are 2 fronius dischargers)
+}
+// response topic: /<catchpenny number>/ChargerData - response message from catchpenny(server side: SUB)
+{
+  "id" : 0,
+  "dischargerId" : 0,     // ID of the charger, if there are multiple chargers in the system, this number can be incremented
+  "powerAcL1" : 1100,          // phase 1 inverter power   [W]
+  "powerAcL2" : 1100,          // phase 2 inverter power   [W]
+  "powerAcL3" : 1100,          // phase 3 inverter power   [W]
+  "voltageAcL1" : 229.3,    // phase 1 inverter voltage [V]
+  "voltageAcL2" : 229.3,    // phase 2 inverter voltage [V]
+  "voltageAcL3" : 229.3,    // phase 3 inverter voltage [V]
+  "currentAcL1" : 12.2,     // phase 1 inverter current [A]
+  "currentAcL2" : 12.2,     // phase 2 inverter current [A]
+  "currentAcL3" : 12.2,     // phase 3 inverter current [A]
+  "temperature" : 37.8,   // inverter temperature [°C]
+  "acFreqeuncy" : 49.99,  // AC frequency [Hz] 
+  "dcVoltage" : 873.5,    // Voltage of the inverter DC bus [V]
+  "dcCurrent" : 11.2,     // Current of the inverter DC bus [A]
+  "status"    : "STANDBY", // Status of the inverter - enum will be later specified
+  "errorCode" : "NOERROR", // Error code if there is any
+}
+
+// BatteryData - get the measurement and status info from the battery
+// topic: /<catchpenny number>/GetBatteryData - message from server(server side: PUB)
+// response topic: /<catchpenny number>/BatteryData - response message from catchpenny(server side: SUB)
+{
+  "id" : 0,
+  "minCellVoltage" : 34.5,        // lowest cell voltage [V]
+  "maxCellVoltage" : 37.5,        // highest cell voltage [V]
+  "averageCellVoltage" : 35.9,    // average cell voltage [V]
+  "minCellTemperature" : 34.5,    // lowest cell temperature [°C]
+  "maxCellTemperature" : 39.8,    // highest cell temperature [°C]
+  "averageCellTemperature" : 36.5,// average cell temperature [°C]   
+  "minCellCapacity" : 88.2,       // lowest cell capacity  [%]
+  "maxCellCapacity" : 99.2,       // highest cell capacity [%]
+  "averageCellCapacity" : 91.2,   // average cell capacity [%]
+  "stateOfCharge" : 80,           // state of charge in [%] to the max stored energy
+  "stateOfHealth" : 90.2,         // state of health in [%]
+  "batteryMode" : "None",         // mode of the battery(if are any) -> for future use
+  "batteryStatus" : "CHARGING",   // battery status -> to be specified
+  "batteryError"  : "NOERROR"     // error state of the battery -> to be specified
+}
+
+// power request message from the server
+// topic: /<catchpenny number>/PowerRequest
+{
+  "id" : 0,
+  "power" : -1523.2     // measured in watts, can be negative for discharge positive for charge
+}
+
+//-------------------------------------------------------------------------------------
+//Energy managment system specific topics
+
+// PowerMeterData - get the measurement from the installed power meters
+// topic: /<catchpenny number>/GetPowerMeterData - message from server(server side: PUB)
+{
+  "assetId" : "lkq34alo",   // generated string passed to the system via json config
+}
+// response topic: /<catchpenny number>/PowerMeterData - response message from catchpenny(server side: SUB)
+{
+  "assetId" : "lkq34alo",   // generated string passed to the system via json config
+  "deviceType" : "scneiderM5110",
+  "powerAcL1" : 1111.1,
+  "powerAcL2" : 1111.1,
+  "powerAcL3" : 1111.1,
+  "apparentPowerL1" : 555.5,
+  "apparentPowerL2" : 555.5,
+  "apparentPowerL3" : 555.5,
+  "reactivePowerL1" : 333.3,
+  "reactivePowerL2" : 333.3,
+  "reactivePowerL3" : 333.3,
+  "currentAcL1" : 22.2,
+  "currentAcL2" : 22.2,
+  "currentAcL3" : 22.2,
+  "voltageAcL1" : 230.1,
+  "voltageAcL2" : 230.1,
+  "voltageAcL3" : 230.1,
+  "acFrequency" : 49.99
+}
+
+// InverterData - get the measurement from the installed power meters
+// topic: /<catchpenny number>/GetInverterData - message from server(server side: PUB)
+{
+  "assetId" : "lkq34alo",   // generated string passed to the system via json config
+}
+// response topic: /<catchpenny number>/InverterData - response message from catchpenny(server side: SUB)
+{
+  "assetId" : "lkq34alo",   // generated string passed to the system via json config
+  "deviceType" : "scneiderM5110",
+  "powerTotal" : 3333.3,
+  "powerAcL1" : 1111.1,
+  "powerAcL2" : 1111.1,
+  "powerAcL3" : 1111.1,
+  "powerFactor" : 0.89,
+  "currentAcL1" : 22.2,
+  "currentAcL2" : 22.2,
+  "currentAcL3" : 22.2,
+  "voltageAcL1" : 230.1,
+  "voltageAcL2" : 230.1,
+  "voltageAcL3" : 230.1,
+  "acFrequency" : 49.99,
+  "powerDc" : 5555.5,
+  "currentDc" : 23.1,
+  "voltageDc" : 671.2
+}
+

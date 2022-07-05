@@ -16,6 +16,8 @@ enum class CatchpennyState{
 };
 
 struct CatchpennyConfig{
+  int   numberOfChargers;
+  int   numberOfDischargers;
   float maxChargeVoltage;
   float minChargeVoltage;
   float maxChargeCurrent;
@@ -27,6 +29,13 @@ struct CatchpennyConfig{
   float maxChargingPower;
   float maxDischargingPower;
   float maxStoredEnergy;
+};
+
+struct SystemInfo{
+  const std::string serialNumber;
+  const std::string firmwareVersion;
+  const std::string systemModel;
+  const std::string systemVersion;
 };
 
 struct Cell {
@@ -103,16 +112,18 @@ private:
   float m_powerSetpoint;
   float m_actualPower;
   CatchpennyState m_state;
+  const SystemInfo m_systemInfo;
+private:
   void DoCellProtectionLogic();
 public:
   Catchpenny(){}
-  Catchpenny(CatchpennyConfig config) : m_config(config){}
+  Catchpenny(CatchpennyConfig config, const SystemInfo& info) : m_config(config), m_systemInfo(info){}
   void AppendCharger(InverterDevice* charger);
   void AppendDischarger(InverterDevice* discharger);
   void AppendBattery(Battery battery){m_battery.push_back(battery);}
   void ReadMeasurements();
   bool UpdateControl();
-  int SetPowerSetpoint(float powerSetpoint);
+  int SetPowerSetpoint(const float powerSetpoint);
   void SafetyShutDown();
 
   /* Getter functions for the datastructures */
@@ -123,8 +134,8 @@ public:
   int GetNumberOfDischargers(){return m_dischargers.size();}
   int GetNumberOfBatteries(){return m_battery.size();}
   CellConfig GetBatteryCellConfig(int batteryNumber){return m_battery[batteryNumber].GetCellConfig();}
-
-  CatchpennyConfig GetCpConfig(){return m_config;}
+  const SystemInfo GetSystemInfo()const {return m_systemInfo;}
+  const CatchpennyConfig& GetCpConfig(){return m_config;}
   CatchpennyState GetState(){return m_state;}
 };
 

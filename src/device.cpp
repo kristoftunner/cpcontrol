@@ -185,3 +185,47 @@ void Tesla::UpdatePower(float powerSetpoint)
   return;
 } 
 
+bool DeviceContainer::ContainsPowerMeterDevice(const std::string& assetId)
+{
+  for(const auto device : m_powerMeterContainer)
+  {
+    if(device->GetAssetId() == assetId)
+      return true;
+  }
+
+  return false;
+}
+
+bool DeviceContainer::ContainsInverterDevice(const std::string& assetId)
+{
+  for(const auto device : m_inverterContainer)
+  {
+    if(device->GetAssetId() == assetId)
+      return true;
+  }
+
+  return false;
+}
+
+const PowerMeterData DeviceContainer::GetPowerMeterDeviceData(const std::string& assetId)
+{
+  for(const auto device : m_powerMeterContainer)
+  {
+    if(device->GetAssetId() == assetId)
+      return device->GetPowerMeterData();
+  }
+  PowerMeterData data;
+  return data;
+}
+
+const InverterData DeviceContainer::GetInverterDeviceData(const std::string& assetId)
+{
+  for(const auto device : m_inverterContainer)
+  {
+    if(device->GetAssetId() == assetId)
+      return device->GetInverterData();
+  }
+
+  InverterData data;
+  return data;
+}

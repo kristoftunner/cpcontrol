@@ -5,6 +5,7 @@
 
 #include "device.hpp"
 #include "catchpenny.hpp"
+#include "mqtt_port.hpp"
 
 enum class EnermanReturnCode{
   ENERMAN_OK,
@@ -18,10 +19,11 @@ enum class EnermanReturnCode{
  */
 class Enerman {
 private:
-  DeviceContainer m_deviceContainer;
+  std::shared_ptr<DeviceContainer> m_deviceContainer;
   std::map<std::string, std::shared_ptr<ModbusPort>> m_modbusCommPortMap;
   std::shared_ptr<Catchpenny> m_catchpenny;
   CatchpennyModbusTcpServer m_catchpennyModbusServer;
+  PahoMqttPort m_port;
   
   int SetupCatchpenny(const json& config, std::shared_ptr<std::shared_mutex> mutex);
 public:
@@ -32,7 +34,9 @@ public:
    * 
    * @return EnermanReturnCode 
    */
-  void Execute();
+  void ExecEnergyManagment();
+  void ExecCatchpennyModbusTcp();
+  void ExecCatchpennyMqtt();
   CatchpennyModbusTcpServer& GetCatchpennyModbusServer(){return m_catchpennyModbusServer;}
 };
 

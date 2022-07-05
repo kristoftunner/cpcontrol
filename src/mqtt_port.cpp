@@ -1,20 +1,23 @@
 #include "mqtt_port.hpp"
+#include "json.hpp"
 
 using namespace std::chrono;
+using json = nlohmann::json;
 
-void PahoMqttPort::Subscribe(std::vector<std::string>& topicsToSubscribe)
+void PahoMqttPort::Subscribe(const std::vector<std::string>& topicsToSubscribe)
 {
   for(const auto& topic : topicsToSubscribe)
   {
     /* TODO: do some error handling here */
-    m_client->subscribe(topic, m_qosCollection);
+    m_client->subscribe(topic, 1);
     m_subscribedTopics.push_back(topic);
   }
 }
 
 void PahoMqttPort::Publish(const MqttMessage& message)
 {
-  m_client->publish(message.first, message.second.data(), message.second.size()); /* TODO: revisit this one for QOS */
+  std::string data = message.message.dump();
+  m_client->publish(mqtt::message(message.topic, message.message.dump(), 1, false));
 }
 
 void PahoMqttPort::Listen() 
@@ -26,8 +29,20 @@ void PahoMqttPort::Listen()
     if(msg)
     {
       /* forward the message to the controller(?)consumer(?) */
-      MqttMessage recvMsg = {msg->get_topic(), msg->to_string()};
-      std::vector<MqttMessage> pubMessages = m_messageResponder.ActOnMessage(recvMsg);
+      std::string myString = msg->to_string();
+      json parsedMessage = json::parse(msg->to_string(), nullptr, false, false);
+      if(!parsedMessage.is_discarded())
+      {
+        MqttMessage recvMsg = {msg->get_topic(), parsedMessage};
+        std::vector<MqttMessage> pubMessages = m_messageResponder.ActOnMessage(recvMsg);
+        if(pubMessages.size() > 0)
+        {
+          for(const auto& message : pubMessages)
+          {
+            Publish(message);
+          }
+        }
+      }
     }
     if(!IsConnected())
     {
@@ -54,10 +69,11 @@ bool PahoMqttPort::IsConnected()
 		}
 		std::cout << "Re-established connection" << std::endl;
 	}
+  std::cout << "connected to the mqtt server" << std::endl;
   return true;
 }
 
-bool PahoMqttPort::Initailize(const mqttConfig& config)
+bool PahoMqttPort::Initailize(const MqttConfig& config)
 {
   std::shared_ptr<mqtt::client> cli = std::make_shared<mqtt::client>(config.serverAddres, config.clientId);
   auto connOptions = mqtt::connect_options_builder()
@@ -71,9 +87,199 @@ bool PahoMqttPort::Initailize(const mqttConfig& config)
   m_qosCollection = config.qos;
   m_client = cli;
   std::cout << "connecting to thes erver...\n";
-  mqtt::connect_response m_response = m_client->connect(connOptions);
+  m_client->connect(connOptions);
   if(IsConnected())
     return true;
   else
     return false;
+}
+
+std::vector<MqttMessage> MqttMessageResponder::ActOnMessage(const MqttMessage& message)
+{
+  /* here we should:
+  *   -parse the topic 
+  *   -act on the message
+  */
+  std::vector<MqttMessage> ret;
+  /* first lets do the catchpenny battery related messages */
+  if(message.topic == "GetSystemInfo")
+  {
+    const SystemInfo info = m_catchpenny->GetSystemInfo();
+    json responseJson = {
+      {"id", 0},
+      {"firmwareVersion", info.firmwareVersion},
+      {"systemModel", info.systemModel},
+      {"serialNumber", info.serialNumber},
+      {"systemVersion", info.systemVersion}
+    };
+    MqttMessage response = {message.topic, responseJson};
+    ret.push_back({std::string("SystemInfo"), responseJson});
+  }
+  else if(message.topic == "GetConfigInfo")
+  {
+    const CatchpennyConfig configInfo = m_catchpenny->GetCpConfig();
+    json responseMessage = {
+      {"id", 0},
+      {"numberOfChargers", configInfo.numberOfChargers},
+      {"numberOfDischargers", configInfo.numberOfDischargers},
+      {"maxChargeVoltage", configInfo.maxChargeVoltage},
+      {"minChargeVoltage", configInfo.minChargeVoltage},
+      {"maxChargeCurrent", configInfo.maxChargeCurrent},
+      {"minChargeCurrent", configInfo.minChargeCurrent},
+      {"maxDischargeVoltage", configInfo.maxDischargeVoltage},
+      {"minDischargeVoltage", configInfo.minDischargeVoltage},
+      {"maxChargingPower", configInfo.maxChargingPower},
+      {"maxDischargingPower", configInfo.maxDischargingPower},
+      {"maxStoredEnergy", configInfo.maxStoredEnergy}
+    };
+    ret.push_back({std::string("ConfigInfo"), responseMessage});
+  }
+  else if(message.topic == "GetStatusUpdate")
+  {
+    /* TODO: implement this message with the error tracker */
+  }
+  else if(message.topic == "PowerRequest")
+  {
+    const float power = message.message.at("power").get<float>();
+    m_catchpenny->SetPowerSetpoint(power);
+  }
+  else if(message.topic == "GetChargerData")
+  {
+    int chargerNumber = message.message.at("chargerId").get<int>();
+    if(chargerNumber < m_catchpenny->GetNumberOfChargers() && chargerNumber >= 0)
+    {
+      InverterData invData = m_catchpenny->GetChargerData(chargerNumber);
+      json responseMessage = {
+        {"id",0},
+        {"chargerId", chargerNumber},
+        {"powerAcL1", invData.powerAcPhase1},
+        {"powerAcL2", invData.powerAcPhase2},
+        {"powerAcL3", invData.powerAcPhase3},
+        {"voltageAcL1", invData.voltageAcPhase1},
+        {"voltageAcL2", invData.voltageAcPhase2},
+        {"voltageAcL3", invData.voltageAcPhase3},
+        {"currentAcL1", invData.currentAcPhase1},
+        {"currentAcL2", invData.currentAcPhase2},
+        {"currentAcL3", invData.currentAcPhase3},
+        {"temperature", invData.inverterTemperature},
+        {"acFrequency", invData.frequency},
+        {"dcVoltage",   invData.voltageDc},
+        {"dcCurrent",   invData.currentDc},
+        {"status",      invData.inverterStatus},
+        {"errorCode",   invData.inverterError}
+      };
+      ret.push_back({std::string("ChargerData"), responseMessage});
+    }
+  }
+  else if(message.topic == "GetDischargerData")
+  {
+    int dischargerNumber = message.message.at("dischargerId").get<int>();
+    if(dischargerNumber < m_catchpenny->GetNumberOfDischargers() && dischargerNumber >= 0)
+    {
+      InverterData invData = m_catchpenny->GetDischargerData(dischargerNumber);
+      json responseMessage = {
+        {"id",0},
+        {"chargerId", dischargerNumber},
+        {"powerAcL1", invData.powerAcPhase1},
+        {"powerAcL2", invData.powerAcPhase2},
+        {"powerAcL3", invData.powerAcPhase3},
+        {"voltageAcL1", invData.voltageAcPhase1},
+        {"voltageAcL2", invData.voltageAcPhase2},
+        {"voltageAcL3", invData.voltageAcPhase3},
+        {"currentAcL1", invData.currentAcPhase1},
+        {"currentAcL2", invData.currentAcPhase2},
+        {"currentAcL3", invData.currentAcPhase3},
+        {"temperature", invData.inverterTemperature},
+        {"acFrequency", invData.frequency},
+        {"dcVoltage",   invData.voltageDc},
+        {"dcCurrent",   invData.currentDc},
+        {"status",      invData.inverterStatus},
+        {"errorCode",   invData.inverterError}
+      };
+      ret.push_back({std::string("DischargerData"), responseMessage});
+    }
+  }
+  else if(message.topic == "GetBatteryData")
+  {
+    /* TODO: fix this single/multiple battery issue */
+    BatteryPackMetaData batteryData = m_catchpenny->GetBatteryData(0);
+    json responseMessage = {
+      {"id", 0},
+      {"minCellVoltage",      batteryData.minCellVoltage},
+      {"maxCellVoltage",      batteryData.maxCellVoltage},
+      {"averageCellVoltage",  batteryData.averageCellVoltage},
+      {"minCellTemperature",  batteryData.minCellTemperature},
+      {"maxCellTemperature",  batteryData.maxCellTemperature},
+      {"averageCellTemperature",batteryData.averageCellTemperature},
+      {"minCellCapacity",     batteryData.minCellCapacity},
+      {"maxCellCapacity",     batteryData.maxCellCapacity},
+      {"averageCellCapacity", batteryData.averageCellCapacity},
+      {"stateOfCharge",       batteryData.stateOfCharge},
+      {"stateOfHealth",       batteryData.stateOfHealth},
+      {"batteryMode","none"},
+      {"batteryStatus",       batteryData.batteryStatus},
+      {"batteryError",        batteryData.batteryError}
+    };
+    ret.push_back({std::string("BatteryData"), responseMessage});
+  }
+  else if(message.topic == "GetPowerMeterData")
+  {
+    const std::string assetId = message.message.at("assetId").get<std::string>();
+    if(m_container->ContainsPowerMeterDevice(assetId))
+    {
+      PowerMeterData data = m_container->GetPowerMeterDeviceData(assetId);
+      json responseMessage = {
+        {"assetId", assetId},
+        {"deviceType", data.deviceType},
+        {"powerAcL1", data.powerAcPhase1},
+        {"powerAcL2", data.powerAcPhase2},
+        {"powerAcL3", data.powerAcPhase3},
+        {"apparentPowerL1", data.apparentPowerPhase1},
+        {"apparentPowerL2", data.apparentPowerPhase2},
+        {"apparentPowerL3", data.apparentPowerPhase3},
+        {"reactivePowerL1", data.reactivePowerPhase1},
+        {"reactivePowerL2", data.reactivePowerPhase2},
+        {"reactivePowerL3", data.reactivePowerPhase3},
+        {"currentAcL1", data.currentAcPhase1},
+        {"currentAcL2", data.currentAcPhase2},
+        {"currentAcL3", data.currentAcPhase3},
+        {"voltageAcL1", data.voltageAcPhase1},
+        {"voltageAcL2", data.voltageAcPhase2},
+        {"voltageAcL3", data.voltageAcPhase3},
+        {"acFrequency", data.frequency}
+      };
+      ret.push_back({std::string("PowerMeterData"), responseMessage});
+    }
+  }
+  else if(message.topic == "GetInverterData")
+  {
+    const std::string assetId = message.message.at("assetId").get<std::string>();
+    if(m_container->ContainsInverterDevice(assetId))
+    {
+      InverterData data = m_container->GetInverterDeviceData(assetId);
+      json responseMessage = {
+        {"assetId", assetId},
+        {"deviceType", data.deviceType},
+        {"powerAcL1", data.powerAcPhase1},
+        {"powerAcL2", data.powerAcPhase2},
+        {"powerAcL3", data.powerAcPhase3},
+        {"powerFactor", data.powerFactor},
+        {"currentAcL1", data.currentAcPhase1},
+        {"currentAcL2", data.currentAcPhase2},
+        {"currentAcL3", data.currentAcPhase3},
+        {"voltageAcL1", data.voltageAcPhase1},
+        {"voltageAcL2", data.voltageAcPhase2},
+        {"voltageAcL3", data.voltageAcPhase3},
+        {"acFrequency", data.frequency},
+        {"powerDc", data.powerDc},
+        {"currentDc", data.currentDc},
+        {"voltageDc", data.voltageDc}
+      };
+
+      ret.push_back({std::string("InverterData"), responseMessage});
+    }
+  }
+  /* TODO: do the error handling */
+
+  return ret;
 }

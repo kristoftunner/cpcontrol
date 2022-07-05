@@ -19,7 +19,7 @@ public:
   PowerMeterData(){} 
 
   std::shared_ptr<std::shared_mutex> dataMutex;
-  std::string assetId;
+  std::string deviceType;
   float powerAcTotal = 0;
   float powerAcPhase1 = 0;
   float powerAcPhase2 = 0;
@@ -47,7 +47,7 @@ public:
 
 struct InverterData {
 public:
-  std::string assetId;
+  std::string deviceType;
   float powerDc = 0;
   float currentDc = 0;
   float voltageDc = 0;
@@ -76,9 +76,13 @@ public:
 class BaseDevice
 {
 protected:
+  std::string m_assetId;
   Devicetype m_type;
 public:
+  BaseDevice() : m_assetId("") {}
   virtual int ReadMeasurements() = 0;
+  virtual void SetAssetId(std::string assetId){m_assetId = assetId;}
+  const std::string GetAssetId(){return m_assetId;}
 };
 
 class PowerMeterDevice : public BaseDevice {
@@ -213,6 +217,11 @@ public:
 
   template<class T>
   int ReadMeasurements(){ return ForEachDevice<&T::ReadMeasurements>();}
+
+  bool ContainsPowerMeterDevice(const std::string& assetId);
+  bool ContainsInverterDevice(const std::string& assetId);
+  const PowerMeterData GetPowerMeterDeviceData(const std::string& assetId);
+  const InverterData GetInverterDeviceData(const std::string& assetId);
 };
 
 template<int (PowerMeterDevice::*functor)()>

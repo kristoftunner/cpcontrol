@@ -7,7 +7,11 @@
 #include "catchpenny.hpp"
 #include "mqtt/client.h"
 
-using MqttMessage = std::pair<std::string,std::string>;
+struct MqttMessage {
+  std::string topic;
+  json message;
+};
+
 /**
  * @brief this class responds to the 
  * 
@@ -24,6 +28,8 @@ public:
    * @return std::map<std::string,std::string> 
    */
   std::vector<MqttMessage> ActOnMessage(const MqttMessage& message);
+  void SetCathpenny(std::shared_ptr<Catchpenny> catchpenny){m_catchpenny = catchpenny;}
+  void SetContainer(std::shared_ptr<DeviceContainer> container){m_container = container;}
 private:
   std::shared_ptr<Catchpenny> m_catchpenny; 
   std::shared_ptr<DeviceContainer> m_container; /*container containing all the devices -> get the device data structures from this */
@@ -42,16 +48,16 @@ class MqttInterface {
 public:
   MqttInterface() = default;
   virtual ~MqttInterface() = default;
-  virtual void Subscribe(std::vector<std::string>& topicsToSubscribe) = 0;
+  virtual void Subscribe(const std::vector<std::string>& topicsToSubscribe) = 0;
   virtual void Publish(const MqttMessage& message) = 0;
   virtual void Listen() = 0;
-  virtual bool IsConnected();
+  virtual bool IsConnected() = 0;
 protected:
   std::vector<std::string> m_subscribedTopics;
   MqttMessageResponder m_messageResponder;
 };
 
-struct mqttConfig {
+struct MqttConfig {
   std::string serverAddres;
   std::string clientId;
   std::string userName;
@@ -60,16 +66,17 @@ struct mqttConfig {
 };
 
 class PahoMqttPort : public MqttInterface {
-  PahoMqttPort() = default;
-  virtual void Subscribe(std::vector<std::string>& subscribeChannels) override;
+public:
+  PahoMqttPort(){};
+  virtual void Subscribe(const std::vector<std::string>& subscribeChannels) override;
   virtual void Publish(const MqttMessage& message) override;
   virtual void Listen() override;
   virtual bool IsConnected() override;
 
-  bool Initailize(const mqttConfig& config);
+  bool Initailize(const MqttConfig& config);
+  void SetMqttResponder(MqttMessageResponder responder){m_messageResponder = responder;}
 private:
   std::shared_ptr<mqtt::client> m_client;
-  mqtt::connect_response m_response;
   std::vector<int> m_qosCollection;
 };
 
@@ -82,7 +89,7 @@ private:
 class SerialMQTTPort : public MqttInterface {
 public:
   SerialMQTTPort() = default;
-  virtual void Subscribe(std::vector<std::string>& subscribeChannels) override;
+  virtual void Subscribe(const std::vector<std::string>& subscribeChannels) override;
   virtual void Publish(const MqttMessage& message) override;
   virtual void Listen() override;
 };

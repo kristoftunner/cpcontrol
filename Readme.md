@@ -56,3 +56,9 @@
 }
 ```
 
+## Feature backlog:
+- Parse the system information from a config file(ini?) and do not hardcode those informations
+- this ```assetId``` thing should be resolved: how to fill all the devices assetId, how to use it in the code 
+
+### TODO/bugfixes
+- check every ```json.at("")``` that the json actually contains the value -> otherwise it runs on a exception 
