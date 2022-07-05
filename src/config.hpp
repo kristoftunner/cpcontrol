@@ -21,5 +21,7 @@ namespace catchpenny_config{
     "GetInverterData",
     "GetStatusUpdate"
   };
+  
+  static constexpr int circularBuffersize = 256;
 };
 #endif //CONFIG_HPP

@@ -10,6 +10,7 @@ add_library(cpcontrol
   enerman.cpp
   catchpenny.cpp
   mqtt_port.cpp
+  error_tracker.cpp
 )
 
 target_include_directories(cpcontrol
