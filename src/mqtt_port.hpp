@@ -6,6 +6,7 @@
 
 #include "catchpenny.hpp"
 #include "mqtt/client.h"
+//#include "error_tracker.hpp"
 
 struct MqttMessage {
   std::string topic;
@@ -28,7 +29,7 @@ public:
    * @return std::map<std::string,std::string> 
    */
   std::vector<MqttMessage> ActOnMessage(const MqttMessage& message);
-  void SetCathpenny(std::shared_ptr<Catchpenny> catchpenny){m_catchpenny = catchpenny;}
+  void SetCatchpenny(std::shared_ptr<Catchpenny> catchpenny){m_catchpenny = catchpenny;}
   void SetContainer(std::shared_ptr<DeviceContainer> container){m_container = container;}
 private:
   std::shared_ptr<Catchpenny> m_catchpenny; 

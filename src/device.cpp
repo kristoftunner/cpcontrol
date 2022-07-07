@@ -10,7 +10,11 @@ int SchneiderPM5110Meter::ReadMeasurements()
 {
   std::vector<float> currentValues = m_commPort->ReadHoldingRegister<float>(currentPhase1Reg,3,m_address);
   if(currentValues.size() != 3)
+  {
+    //const Error error = {ErrorType::ERROR_MODBUS_READ, ErrorSeverityLevel::ERROR_WARNING};
+    //m_et->PushBackError(error);
     return 1;
+  }
   else
   {
     m_data.currentAcPhase1 = currentValues[0];
@@ -20,7 +24,11 @@ int SchneiderPM5110Meter::ReadMeasurements()
   
   std::vector<float> voltageValues = m_commPort->ReadHoldingRegister<float>(voltagePhase1Reg,3,m_address);
   if(voltageValues.size() != 3)
+  {
+    //const Error error = {ErrorType::ERROR_MODBUS_READ, ErrorSeverityLevel::ERROR_WARNING};
+    //m_et->PushBackError(error);
     return 1;
+  }
   else
   {
     m_data.voltageAcPhase1 = voltageValues[0];
@@ -30,7 +38,11 @@ int SchneiderPM5110Meter::ReadMeasurements()
 
   std::vector<float> powerValues = m_commPort->ReadHoldingRegister<float>(powerAcPhase1Reg,12,m_address);
   if(powerValues.size() != 12)
+  {
+    //const Error error = {ErrorType::ERROR_MODBUS_READ, ErrorSeverityLevel::ERROR_WARNING};
+    //m_et->PushBackError(error);
     return 1;
+  }
   else
   {
     m_data.powerAcPhase1 = powerValues[0];
@@ -49,7 +61,11 @@ int SchneiderPM5110Meter::ReadMeasurements()
 
   std::vector<float> frequency = m_commPort->ReadHoldingRegister<float>(frequencyReg,1,m_address);
   if(frequency.size() != 1)
+  {
+    //const Error error = {ErrorType::ERROR_MODBUS_READ, ErrorSeverityLevel::ERROR_WARNING};
+    //m_et->PushBackError(error);
     return 1;
+  }
   else
   {
     m_data.frequency = frequency[0];
@@ -68,7 +84,11 @@ int FroniusIgPlus::ReadMeasurements()
 {
   std::vector<uint16_t> currentValues = m_commPort->ReadHoldingRegister<uint16_t>(acCurrentRegBase,5,m_address);
   if(currentValues.size() != 5)
+  {
+    //const Error error = {ErrorType::ERROR_MODBUS_READ, ErrorSeverityLevel::ERROR_WARNING};
+    //m_et->PushBackError(error);
     return 1;
+  }
   else
   {
     float scaleFactor = static_cast<float>(static_cast<int16_t>(currentValues[4]));
@@ -79,7 +99,11 @@ int FroniusIgPlus::ReadMeasurements()
 
   std::vector<uint16_t> voltageAndPowerValues = m_commPort->ReadHoldingRegister<uint16_t>(acVoltageBase,14,m_address);
   if(voltageAndPowerValues.size() != 14)
+  {
+    //const Error error = {ErrorType::ERROR_MODBUS_READ, ErrorSeverityLevel::ERROR_WARNING};
+    //m_et->PushBackError(error);
     return 1;
+  }
   else
   {
     /* scale values */
@@ -103,10 +127,18 @@ int FroniusIgPlus::ReadMeasurements()
   
   std::vector<uint16_t> dc1 = m_commPort->ReadHoldingRegister<uint16_t>(dcValues1Base,2,m_address);
   if(dc1.size() != 2)
+  {
+    //const Error error = {ErrorType::ERROR_MODBUS_READ, ErrorSeverityLevel::ERROR_WARNING};
+    //m_et->PushBackError(error);
     return 1;
+  }
   std::vector<uint16_t> dc2 = m_commPort->ReadHoldingRegister<uint16_t>(dcValues2Base,2,m_address);
   if(dc1.size() != 2)
+  {
+    //const Error error = {ErrorType::ERROR_MODBUS_READ, ErrorSeverityLevel::ERROR_WARNING};
+    //m_et->PushBackError(error);
     return 1;
+  }
 
   m_data.currentDc = static_cast<float>(dc1[0]) + static_cast<float>(dc2[0]);
   m_data.voltageDc = (static_cast<float>(dc1[1]) + static_cast<float>(dc2[1])) / 2;
@@ -116,20 +148,24 @@ int FroniusIgPlus::ReadMeasurements()
 
 void FroniusIgPlus::UpdatePower(float powerSetpoint)
 {
-  /* update trhottle -> enable control
-    TODO: do some error handling here*/
+  /* update trhottle -> enable control */
   if(powerSetpoint > maxContinuousPower)
-    ;
+  {
+    //const Error error = {ErrorType::ERROR_CONTROL_WRONG_PWR_REQUEST, ErrorSeverityLevel::ERROR_WARNING};
+    //m_et->PushBackError(error);
+  }  
   else
   {
     uint16_t percentSetPoint = static_cast<uint16_t>(powerSetpoint / maxContinuousPower * 100);
     if(m_commPort->WriteSingleRegister(powerSetpointRegBase, percentSetPoint, m_address) == false)
     {
-      ;
+      //const Error error = {ErrorType::ERROR_MODBUS_WRITE, ErrorSeverityLevel::ERROR_WARNING};
+      //m_et->PushBackError(error);
     }
     if(m_commPort->WriteSingleRegister(throttleEnableRegBase, 1, m_address) == false)
     {
-      ;
+      //const Error error = {ErrorType::ERROR_MODBUS_WRITE, ErrorSeverityLevel::ERROR_WARNING};
+      //m_et->PushBackError(error);
     }
   }
   return ;
@@ -146,7 +182,11 @@ int Tesla::ReadMeasurements()
   /* read current, voltages and power values */
   std::vector<uint16_t> statusMeasValues = m_commPort->ReadHoldingRegister<uint16_t>(statusMeasurementRegBase,12,m_address);
   if(statusMeasValues.size() != 12)
+  {
+    //const Error error = {ErrorType::ERROR_MODBUS_READ, ErrorSeverityLevel::ERROR_WARNING};
+    //m_et->PushBackError(error);
     return 1;
+  }
   else
   {
     m_data.voltageAcPhase1 = static_cast<float>(statusMeasValues[2]) * 0.01;
@@ -179,7 +219,8 @@ void Tesla::UpdatePower(float powerSetpoint)
     uint16_t chargeCurrent = (powerSetpoint / ((m_data.voltageAcPhase1 + m_data.voltageAcPhase2) / 2)) / 2;
     if(m_commPort->WriteSingleRegister(chargeCurrentBase, chargeCurrent, m_address) == false)
     {
-      ; /* TODO: do the error handling */
+      //const Error error = {ErrorType::ERROR_MODBUS_WRITE, ErrorSeverityLevel::ERROR_WARNING};
+      //m_et->PushBackError(error);
     }
   }
   return;

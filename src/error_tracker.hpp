@@ -1,6 +1,8 @@
 #ifndef ERROR_TRACKER_HPP
 #define ERROR_TRACKER_HPP
 
+#include <mutex>
+
 #include <boost/circular_buffer.hpp>
 #include "config.hpp"
 
@@ -13,6 +15,15 @@
  */
 enum class ErrorType{
   ERROR_MQTT_UNPARSABLE_JSON_MSG,
+  ERROR_MQTT_BAD_TOPIC,
+  ERROR_CONTROL_TOO_MUCH_PWR_REQUESTED,
+  ERROR_CONTROL_WRONG_PWR_REQUEST,
+  ERROR_MODBUS_READ,
+  ERROR_MODBUS_WRITE,
+  ERROR_CELLS_OVERTEMPERATURE,
+  ERROR_CELLS_UNDERTEMPERATURE,
+  ERROR_CELLS_OVERVOLTAGE,
+  ERROR_CELLS_UNDERVOLTAGE
 };
 
 enum class ErrorSeverityLevel{
@@ -27,6 +38,12 @@ struct Error {
   ErrorSeverityLevel level;
 };
 
+/**
+ * @brief one instance should be created in the beginning of the program
+ *        and the shared_ptr should be passed by class instance to instance
+ *        everybody should have a shared_ptr of this error tracker 
+ * 
+ */
 class ErrorTracker{
 public:
   ErrorTracker() : 
@@ -35,16 +52,16 @@ public:
     m_warningBuffer(CIRCULAR_BUFFER_SIZE),
     m_fatalBuffer(CIRCULAR_BUFFER_SIZE)
   {}
+  void PushBackError(const Error& error);
+  const ErrorType PopError(const ErrorSeverityLevel& level);
+  const ErrorSeverityLevel GetMaxSeverity() const;
 private:
   boost::circular_buffer<ErrorType> m_debugBuffer;
   boost::circular_buffer<ErrorType> m_infoBuffer;
   boost::circular_buffer<ErrorType> m_warningBuffer;
   boost::circular_buffer<ErrorType> m_fatalBuffer;
   ErrorSeverityLevel m_maxSeverityLevel;
-
-  void PushBackError(const Error& error);
-  const ErrorType PopError(const ErrorSeverityLevel& level);
-  const ErrorSeverityLevel GetMaxSeverity() const;
+  std::mutex m_dataMutex;
 };
 
 #endif //ERROR_TRACKER_HPP

@@ -83,7 +83,6 @@ bool ModbusPort::Initialize(const json& jsonInput)
 
 void ModbusPort::AddSlave(int address)
 {
-  /* right now this only works for RS485 slaves, TODO: support for modbustcp(ONLY IF NEEDED) */
   m_modbus->addSlave(address);
 }
 

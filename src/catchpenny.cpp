@@ -15,7 +15,6 @@ void Catchpenny::AppendDischarger(InverterDevice* discharger)
 
 void Catchpenny::ReadMeasurements()
 {
-  /* TODO: do some error handling */
   for(auto charger : m_chargers)
   {
     charger->ReadMeasurements();
@@ -33,13 +32,20 @@ void Catchpenny::ReadMeasurements()
 
 int Catchpenny::SetPowerSetpoint(const float powerSetpoint)
 {
-  /* TODO: do some error handling */
   if(powerSetpoint < 0 && abs(powerSetpoint) <= m_config.maxDischargingPower)
+  {
     m_powerSetpoint = powerSetpoint;
+  }
   else if(powerSetpoint > 0 && abs(powerSetpoint) <= m_config.maxChargingPower)
+  {
     m_powerSetpoint = powerSetpoint;
+  }
   else
+  {
+    //const Error error = {ErrorType::ERROR_CONTROL_WRONG_PWR_REQUEST, ErrorSeverityLevel::ERROR_WARNING};
+    //m_et->PushBackError(error);
     return 1;
+  }
   
   return 0;
 }
@@ -83,7 +89,6 @@ bool Catchpenny::UpdateControl()
             at least 0.5 hour of charge should be possible with this setting*/
           if(sumStorage < std::abs(m_powerSetpoint) / 2)
           {
-            /* do some state handling here */
             m_state = CatchpennyState::CATCHPENNY_IDLE;
             break;
           }
@@ -137,7 +142,6 @@ bool Catchpenny::UpdateControl()
             at least 0.5 hour of discharge should be possible with this setting*/
           if(sumStorage < std::abs(m_powerSetpoint) / 2)
           {
-            /* do some state handling here */
             m_state = CatchpennyState::CATCHPENNY_IDLE;
             break;
           }
@@ -202,7 +206,7 @@ bool Catchpenny::UpdateControl()
 void Catchpenny::DoCellProtectionLogic()
 {
   /* check if the battery is OK, if not -> set state HALTED_ON_ERROR
-    TODO: do some error handling here */
+    error handling is in the battery functions */
   for(auto battery : m_battery)
   {
     if((battery.CheckOverTemperature() && battery.CheckOverVoltage() && battery.CheckUnderTemperature()
@@ -231,7 +235,11 @@ bool Battery::CheckOverVoltage()
   for(Cell& cell : m_cells)
   {
     if(cell.voltage > m_cellConfig.maxCellVoltage)
+    {
+      //const Error error = {ErrorType::ERROR_CELLS_OVERVOLTAGE, ErrorSeverityLevel::ERROR_FATAL};
+      //m_et->PushBackError(error);
       return false;
+    }
   }
   return true;
 }
@@ -241,7 +249,11 @@ bool Battery::CheckUnderVoltage()
   for(Cell& cell : m_cells)
   {
     if(cell.voltage < m_cellConfig.minCellVoltage)
+    {
+      //const Error error = {ErrorType::ERROR_CELLS_UNDERVOLTAGE, ErrorSeverityLevel::ERROR_FATAL};
+      //m_et->PushBackError(error);
       return false;
+    }
   }
   return true;
 }
@@ -251,7 +263,11 @@ bool Battery::CheckOverTemperature()
   for(Cell& cell : m_cells)
   {
     if(cell.temperature > m_cellConfig.maxCellTemperature)
+    {
+      //const Error error = {ErrorType::ERROR_CELLS_OVERTEMPERATURE, ErrorSeverityLevel::ERROR_FATAL};
+      //m_et->PushBackError(error);
       return false;
+    }
   }
   return true;
 }
@@ -261,7 +277,11 @@ bool Battery::CheckUnderTemperature()
   for(Cell& cell : m_cells)
   {
     if(cell.temperature < m_cellConfig.minCellTemperature)
+    {
+      //const Error error = {ErrorType::ERROR_CELLS_UNDERTEMPERATURE, ErrorSeverityLevel::ERROR_FATAL};
+      //m_et->PushBackError(error);
       return false;
+    }
   }
   return true;
 }
@@ -288,7 +308,9 @@ int Battery::ReadMeasurements()
   std::vector<uint16_t> cellCapacityValues = m_commPort->ReadHoldingRegister<uint16_t>(cellCapacityBaseReg,m_cells.size(),m_address);
   if(cellVoltageValues.size() != m_cells.size() && cellCapacityValues.size() != m_cells.size())  
   { 
-    return 1; /*TODO: some error handling*/
+    //const Error error = {ErrorType::ERROR_MODBUS_READ, ErrorSeverityLevel::ERROR_WARNING};
+    //m_et->PushBackError(error);
+    return 1; 
   }
   else
   {
@@ -299,7 +321,9 @@ int Battery::ReadMeasurements()
   }
   if(cellTemperatureValues.size() != 30)
   {
-    return 1; /* TODO: do the error handling here */
+    //const Error error = {ErrorType::ERROR_MODBUS_READ, ErrorSeverityLevel::ERROR_WARNING};
+    //m_et->PushBackError(error);
+    return 1; 
   }
   else 
   {

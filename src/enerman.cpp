@@ -34,6 +34,7 @@ EnermanReturnCode Enerman::BuildDevices(const json& devicesConfig)
         const auto& commPort = powerMeter.at("interfacePort").get<std::string>();
         const auto& assetId = powerMeter.at("assetId").get<std::string>();
         device->SetAssetId(assetId);
+        //device->SetErrorTracker(m_et);
         if(m_modbusCommPortMap.contains(commPort))
         {
           device->SetCommPort(m_modbusCommPortMap[commPort]);
@@ -70,12 +71,12 @@ EnermanReturnCode Enerman::BuildDevices(const json& devicesConfig)
   
   /* setup the mqtt port of the system */
   MqttMessageResponder responder;
-  responder.SetCathpenny(m_catchpenny);
+  responder.SetCatchpenny(m_catchpenny);
   responder.SetContainer(m_deviceContainer);
+  //responder.SetErrorTracker(m_et);
   PahoMqttPort port;
   port.Initailize(catchpenny_config::mqttConfig);
   port.SetMqttResponder(responder);
-  /* TODO: all the config informations to a config file */
   port.Subscribe(catchpenny_config::subrscribeTopics);
   m_port = port;
   return EnermanReturnCode::ENERMAN_OK;
@@ -105,6 +106,7 @@ int Enerman::SetupCatchpenny(const json& config, std::shared_ptr<std::shared_mut
 
   std::shared_ptr<Catchpenny> catchpenny = std::make_shared<Catchpenny>(cfg, catchpenny_config::systemInfo);
   m_catchpenny = catchpenny;
+  //m_catchpenny->SetErrorTracker(m_et);
   const auto& commPort = config.at("interfacePort").get<std::string>();
     
   /* setup the tesla chargers */
@@ -114,12 +116,14 @@ int Enerman::SetupCatchpenny(const json& config, std::shared_ptr<std::shared_mut
     Battery battery = Battery(50000, 80, catchpenny_config::cellCfg, address);
     battery.SetCommPort(m_modbusCommPortMap[commPort]);
     battery.SetDataMutex(mutex);
+    //battery.SetErrorTracker(m_et);
     catchpenny->AppendBattery(battery);
     Tesla *inverter = new Tesla();
     inverter->SetCommPort(m_modbusCommPortMap[commPort]);
     if(inverter->Initialize(charger) == 0)
     {
       inverter->SetDataMutex(mutex);
+      //inverter->SetErrorTracker(m_et);
       InverterDevice *invDevice = inverter;
       catchpenny->AppendCharger(invDevice);
     }
@@ -136,6 +140,7 @@ int Enerman::SetupCatchpenny(const json& config, std::shared_ptr<std::shared_mut
     if(inverter->Initialize(disCharger) == 0)
     {
       inverter->SetDataMutex(mutex);
+      //inverter->SetErrorTracker(m_et);
       InverterDevice *invDevice = inverter;
       catchpenny->AppendDischarger(invDevice);
     }
@@ -149,6 +154,7 @@ int Enerman::SetupCatchpenny(const json& config, std::shared_ptr<std::shared_mut
     const std::string host = tcpPort.at("host");
     const std::string port = tcpPort.at("port");
     m_catchpennyModbusServer.SetCatchpenny(m_catchpenny);
+    //m_catchpennyModbusServer.SetErrroTracker(m_et);
     m_catchpennyModbusServer.Initialize(host, port);
   }
   else

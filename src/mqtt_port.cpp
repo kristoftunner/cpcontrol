@@ -279,7 +279,11 @@ std::vector<MqttMessage> MqttMessageResponder::ActOnMessage(const MqttMessage& m
       ret.push_back({std::string("InverterData"), responseMessage});
     }
   }
-  /* TODO: do the error handling */
+  else
+  {
+    //const Error error = {ErrorType::ERROR_MQTT_BAD_TOPIC, ErrorSeverityLevel::ERROR_WARNING};
+    //m_et->PushBackError(error);
+  }
 
   return ret;
 }

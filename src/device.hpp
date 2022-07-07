@@ -7,6 +7,7 @@
 #include <shared_mutex>
 
 #include "device_comm.hpp"
+//#include "error_tracker.hpp"
 
 enum class Devicetype {
   powerMeter,
