@@ -1,6 +1,6 @@
 #include "error_tracker.hpp"
 
-void ErrorTracker::PushBackError(const Error& error)
+/*void ErrorTracker::PushBackError(const Error& error)
 {
   switch(error.level)
   {
@@ -68,4 +68,4 @@ const ErrorSeverityLevel ErrorTracker::GetMaxSeverity() const
   size_t warningSize = m_warningBuffer.size();
   size_t infoSize = m_infoBuffer.size();
   size_t debugSize = m_debugBuffer.size();
-}
+}*/

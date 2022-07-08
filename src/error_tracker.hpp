@@ -3,7 +3,6 @@
 
 #include <mutex>
 
-#include <boost/circular_buffer.hpp>
 #include "config.hpp"
 
 #define CIRCULAR_BUFFER_SIZE 128
@@ -42,7 +41,7 @@ struct Error {
  * @brief one instance should be created in the beginning of the program
  *        and the shared_ptr should be passed by class instance to instance
  *        everybody should have a shared_ptr of this error tracker 
- * 
+ *        TODO: make this class singleton 
  */
 class ErrorTracker{
 public:
@@ -56,10 +55,6 @@ public:
   const ErrorType PopError(const ErrorSeverityLevel& level);
   const ErrorSeverityLevel GetMaxSeverity() const;
 private:
-  boost::circular_buffer<ErrorType> m_debugBuffer;
-  boost::circular_buffer<ErrorType> m_infoBuffer;
-  boost::circular_buffer<ErrorType> m_warningBuffer;
-  boost::circular_buffer<ErrorType> m_fatalBuffer;
   ErrorSeverityLevel m_maxSeverityLevel;
   std::mutex m_dataMutex;
 };

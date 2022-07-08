@@ -44,6 +44,7 @@
   "id" : 0,
   "registeredErrors" : 10,                // number of registered errors in the error buffer 
   "highestCriticalityLevel" : "Warning",  // can be: Info, Debug, Warning, Critical
+  "catchpennyStatus" : "None"
 }  
 
 // ChargerData - get the measurement and status info from the Nth charger inverter
