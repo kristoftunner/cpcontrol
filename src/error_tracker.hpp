@@ -45,12 +45,7 @@ struct Error {
  */
 class ErrorTracker{
 public:
-  ErrorTracker() : 
-    m_debugBuffer(CIRCULAR_BUFFER_SIZE),
-    m_infoBuffer(CIRCULAR_BUFFER_SIZE),
-    m_warningBuffer(CIRCULAR_BUFFER_SIZE),
-    m_fatalBuffer(CIRCULAR_BUFFER_SIZE)
-  {}
+  ErrorTracker(){}
   void PushBackError(const Error& error);
   const ErrorType PopError(const ErrorSeverityLevel& level);
   const ErrorSeverityLevel GetMaxSeverity() const;

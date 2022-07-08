@@ -5,6 +5,7 @@
 #include <vector>
 #include <map>
 #include <shared_mutex>
+#include <chrono>
 
 #include "device_comm.hpp"
 //#include "error_tracker.hpp"
@@ -72,6 +73,53 @@ public:
   uint32_t inverterStatus;
   uint32_t inverterError;
   std::shared_ptr<std::shared_mutex> dataMutex;
+};
+
+enum class DeviceConnection {
+  CONNECTION_PENDING,
+  DISCONNECTION_PENDING,
+  CONNECTED,
+  DISCONNECTED
+};
+
+struct ConnectionCheckerConfig {
+  /* for checking disconnection */
+  int minBadAccessThreshold;
+  float minBadSeconds;
+  /* for checking connection */
+  int minGoodAccessThreshold;
+  float minGoodSeconds;
+};
+/**
+ * @brief checks if the associated device is connected, for example:
+ *        - if a modbus access was wrong, register the wrong read, measure the elapsed time between the first bad access and
+ *        the occurences of bad accesses, devices are disconnected according to this:
+ *          - if both min thresholds are reached
+ *          - if one of the max threshold is reached
+ *        - devices are counted as connected if:
+ *          - there was a minium amount of good accesses and the the time from the first good access above the minimum good access threshold
+ *          - there was a maximum amount of good accesses
+ * 
+ */
+class DeviceConnectionChecker
+{
+public:
+  DeviceConnectionChecker(const ConnectionCheckerConfig& config) : m_config(config){}
+  const DeviceConnection IsConnected() const {return m_connection;}
+  /**
+   * @brief updates the elapsed time
+   * 
+   */
+  void OnDevicesAccess(bool eventType);
+private:
+  DeviceConnection m_connection = DeviceConnection::DISCONNECTED;
+  ConnectionCheckerConfig m_config;
+  std::chrono::duration<float> m_goodAccessElapsedTime;
+  std::chrono::duration<float> m_badAccessElapsedTime;
+  std::chrono::time_point<std::chrono::steady_clock> m_goodAccessStartTime;
+  std::chrono::time_point<std::chrono::steady_clock> m_badAccessStartTime;
+  int m_goodAccesses = 0;
+  int m_badAccesses = 0;
 };
 
 class BaseDevice

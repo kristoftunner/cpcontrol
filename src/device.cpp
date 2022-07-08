@@ -270,3 +270,81 @@ const InverterData DeviceContainer::GetInverterDeviceData(const std::string& ass
   InverterData data;
   return data;
 }
+  
+void DeviceConnectionChecker::OnDevicesAccess(bool eventType)
+{
+  switch(m_connection)
+  {
+    case DeviceConnection::DISCONNECTED:
+    {
+      if(eventType) /* if good acces comes in, start the good access timer, counter, save the start time and go to pending state */
+      {
+        m_goodAccesses = 1;
+        m_goodAccessElapsedTime = std::chrono::duration<float>();
+        m_goodAccessStartTime = std::chrono::steady_clock::now();
+        m_connection = DeviceConnection::CONNECTION_PENDING;
+      }
+      else /* if bad access comes in then just update the bad access counter and timer */ 
+      {
+        m_badAccesses++; 
+        m_badAccessElapsedTime = std::chrono::steady_clock::now() - m_badAccessStartTime;
+      }
+      break;
+    }
+    case DeviceConnection::CONNECTION_PENDING:
+    {
+      if(eventType) /* update the access counter and the timer, check if condition for connected is true */
+      {
+        m_goodAccesses++;
+        m_goodAccessElapsedTime = std::chrono::steady_clock::now() - m_goodAccessStartTime;
+        if(m_goodAccessElapsedTime.count() > m_config.minGoodSeconds && m_goodAccesses > m_config.minGoodAccessThreshold)
+        {
+          m_connection = DeviceConnection::CONNECTED;
+        }
+      } 
+      else  /* if bad acces comes in, we should fall back to disconnected and start the bad access timer and counter*/ 
+      {
+        m_badAccesses = 1;
+        m_badAccessStartTime = std::chrono::steady_clock::now();
+        m_badAccessElapsedTime = std::chrono::duration<float>();
+        m_connection = DeviceConnection::DISCONNECTED;
+      }
+    }
+    case DeviceConnection::CONNECTED:
+    {
+      if(eventType) /* if good access comes in just update the counter and timer */
+      {
+        m_goodAccesses++;
+        m_goodAccessElapsedTime = std::chrono::steady_clock::now() - m_goodAccessStartTime;
+      }
+      else /* if bad access comes in start the bad acces counter, timer, save the time and fall back to disconnect pending */
+      {
+        m_badAccesses = 1;
+        m_badAccessStartTime = std::chrono::steady_clock::now();
+        m_badAccessElapsedTime = std::chrono::duration<float>();
+        m_connection = DeviceConnection::DISCONNECTION_PENDING;
+      }
+    }
+    case DeviceConnection::DISCONNECTION_PENDING:
+    {
+      if(eventType) /* if good access comes in  just fall back to connected and update the counters*/
+      {
+        m_goodAccesses = 1;
+        m_goodAccessStartTime = std::chrono::steady_clock::now();
+        m_goodAccessElapsedTime = std::chrono::duration<float>();
+        m_connection = DeviceConnection::CONNECTED;
+      }
+      else /* update the counter and timer and check if we can go to disconnected */
+      {
+        m_badAccesses++;
+        m_badAccessElapsedTime = std::chrono::steady_clock::now() - m_badAccessStartTime;
+        if(m_badAccessElapsedTime.count() > m_config.minBadSeconds && m_badAccesses > m_config.minBadAccessThreshold)
+        {
+          m_connection = DeviceConnection::DISCONNECTED;
+        }
+      }
+    }
+    default:
+      break;
+  }
+}
