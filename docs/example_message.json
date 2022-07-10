@@ -187,7 +187,8 @@
   "voltageAcL1" : 230.1,
   "voltageAcL2" : 230.1,
   "voltageAcL3" : 230.1,
-  "acFrequency" : 49.99
+  "acFrequency" : 49.99,
+  "status" : "CONNECTED_RUNNING"
 }
 
 // InverterData - get the measurement from the installed power meters

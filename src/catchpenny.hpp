@@ -45,16 +45,11 @@ struct Cell {
 /* TODO: use these error and status codes */
 enum class BatteryStatusCode {
   CONNECTED_OK,
-  CONNECTED_ERROR,
+  CONNECTED_OVERVOLTAGE_ERROR,
+  CONNECTED_UNDERVOLTAGE_ERROR,
+  CONNECTED_OVERTEMPERATURE_ERROR,
+  CONNECTED_UNDERTEMPERATURE_ERROR,
   DISCONNECTED
-};
-
-enum class BatteryErrorCode {
-  NOERROR,
-  OVERVOLTAGE_ERROR,
-  UNDERVOLTAGE_ERROR,
-  OVERTEMPERATURE_ERROR,
-  UNDERTEMPERATURE_ERROR
 };
 
 struct BatteryPackMetaData {
@@ -72,7 +67,6 @@ struct BatteryPackMetaData {
   float storedEnergy = 0;
   float stateOfCharge = 0;
   BatteryStatusCode batteryStatus = BatteryStatusCode::DISCONNECTED;
-  BatteryErrorCode batteryError = BatteryErrorCode::NOERROR;
   std::shared_ptr<std::shared_mutex> dataMutex;
 };
 
@@ -99,8 +93,8 @@ public:
   bool CheckOverTemperature();
   bool CheckUnderTemperature();
   int ReadMeasurements();
+  void UpdateState();
   static const std::string ParseStatusCode(const BatteryStatusCode& status);
-  static const std::string ParseErrorCode(const BatteryErrorCode& error);
   /* Getters and setter */
   const Cell& GetCell(int index);
   float GetAvailableChargeStorage();    // in kWh

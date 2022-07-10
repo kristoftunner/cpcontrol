@@ -186,6 +186,7 @@ std::vector<MqttMessage> MqttMessageResponder::ActOnMessage(const MqttMessage& m
     if(chargerNumber < m_catchpenny->GetNumberOfChargers() && chargerNumber >= 0)
     {
       InverterData invData = m_catchpenny->GetChargerData(chargerNumber);
+      const std::string status = InverterDevice::ParseStatusCode(invData.inverterStatus);
       json responseMessage = {
         {"id",0},
         {"chargerId", chargerNumber},
@@ -202,8 +203,7 @@ std::vector<MqttMessage> MqttMessageResponder::ActOnMessage(const MqttMessage& m
         {"acFrequency", invData.frequency},
         {"dcVoltage",   invData.voltageDc},
         {"dcCurrent",   invData.currentDc},
-        {"status",      invData.inverterStatus},
-        {"errorCode",   invData.inverterError}
+        {"status",      status}
       };
       ret.push_back({std::string("ChargerData"), responseMessage});
     }
@@ -214,6 +214,7 @@ std::vector<MqttMessage> MqttMessageResponder::ActOnMessage(const MqttMessage& m
     if(dischargerNumber < m_catchpenny->GetNumberOfDischargers() && dischargerNumber >= 0)
     {
       InverterData invData = m_catchpenny->GetDischargerData(dischargerNumber);
+      const std::string status = InverterDevice::ParseStatusCode(invData.inverterStatus);
       json responseMessage = {
         {"id",0},
         {"chargerId", dischargerNumber},
@@ -230,8 +231,7 @@ std::vector<MqttMessage> MqttMessageResponder::ActOnMessage(const MqttMessage& m
         {"acFrequency", invData.frequency},
         {"dcVoltage",   invData.voltageDc},
         {"dcCurrent",   invData.currentDc},
-        {"status",      invData.inverterStatus},
-        {"errorCode",   invData.inverterError}
+        {"status",      status}
       };
       ret.push_back({std::string("DischargerData"), responseMessage});
     }
@@ -240,6 +240,7 @@ std::vector<MqttMessage> MqttMessageResponder::ActOnMessage(const MqttMessage& m
   {
     /* TODO: fix this single/multiple battery issue */
     BatteryPackMetaData batteryData = m_catchpenny->GetBatteryData(0);
+    const std::string status = Battery::ParseStatusCode(batteryData.batteryStatus);
     json responseMessage = {
       {"id", 0},
       {"minCellVoltage",      batteryData.minCellVoltage},
@@ -254,8 +255,7 @@ std::vector<MqttMessage> MqttMessageResponder::ActOnMessage(const MqttMessage& m
       {"stateOfCharge",       batteryData.stateOfCharge},
       {"stateOfHealth",       batteryData.stateOfHealth},
       {"batteryMode","none"},
-      {"batteryStatus",       batteryData.batteryStatus},
-      {"batteryError",        batteryData.batteryError}
+      {"batteryStatus",       status}
     };
     ret.push_back({std::string("BatteryData"), responseMessage});
   }
@@ -329,6 +329,7 @@ std::vector<MqttMessage> MqttMessageResponder::ActOnMessage(const MqttMessage& m
     if(m_container->ContainsInverterDevice(assetId))
     {
       InverterData data = m_container->GetInverterDeviceData(assetId);
+      const std::string status = InverterDevice::ParseStatusCode(data.inverterStatus);
       json responseMessage = {
         {"assetId", assetId},
         {"deviceModel", data.deviceModel},
@@ -345,7 +346,8 @@ std::vector<MqttMessage> MqttMessageResponder::ActOnMessage(const MqttMessage& m
         {"acFrequency", data.frequency},
         {"powerDc", data.powerDc},
         {"currentDc", data.currentDc},
-        {"voltageDc", data.voltageDc}
+        {"voltageDc", data.voltageDc},
+        {"status", status}
       };
 
       ret.push_back({std::string("InverterData"), responseMessage});

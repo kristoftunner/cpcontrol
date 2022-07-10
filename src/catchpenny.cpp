@@ -368,21 +368,11 @@ const std::string Battery::ParseStatusCode(const BatteryStatusCode& status)
   switch(status)
   {
     case BatteryStatusCode::CONNECTED_OK: return std::string("CONNECTED_OK");
-    case BatteryStatusCode::CONNECTED_ERROR: return std::string("CONNECTED_ERROR");
     case BatteryStatusCode::DISCONNECTED: return std::string("DISCONNECTED");
-    default: return std::string("");
-  }
-}
-
-const std::string Battery::ParseErrorCode(const BatteryErrorCode& error)
-{
-  switch(error)
-  {
-    case BatteryErrorCode::NOERROR: return std::string("NOERROR");
-    case BatteryErrorCode::OVERVOLTAGE_ERROR: return std::string("OVERVOLTAGE_ERROR");
-    case BatteryErrorCode::UNDERVOLTAGE_ERROR: return std::string("UNDERVOLTAGE_ERROR");
-    case BatteryErrorCode::OVERTEMPERATURE_ERROR: return std::string("OVERTEMPERATURE_ERROR");
-    case BatteryErrorCode::UNDERTEMPERATURE_ERROR: return std::string("UNDERTEMPERATURE_ERROR");
+    case BatteryStatusCode::CONNECTED_OVERVOLTAGE_ERROR: return std::string("CONNECTED_OVERVOLTAGE_ERROR");
+    case BatteryStatusCode::CONNECTED_UNDERVOLTAGE_ERROR: return std::string("CONNECTED_UNDERVOLTAGE_ERROR");
+    case BatteryStatusCode::CONNECTED_OVERTEMPERATURE_ERROR: return std::string("CONNECTED_OVERTEMPERATURE_ERROR");
+    case BatteryStatusCode::CONNECTED_UNDERTEMPERATURE_ERROR: return std::string("CONNECTED_UNDERTEMPERATURE_ERROR");
     default: return std::string("");
   }
 }

@@ -1,33 +1,13 @@
 #include "device.hpp"
 
-const std::string InverterDevice::ParseErrorCode(const InverterErrorCode& errorCode)
-{
-  switch(errorCode)
-  {
-    case InverterErrorCode::NOERROR: return std::string("NOERROR");
-    case InverterErrorCode::DISCONNECTED_BUS_ERROR: return std::string("DISCONNECTED_BUS_ERROR");
-    case InverterErrorCode::OVERHEATED: return std::string("OVERHEATED");
-    default: return std::string("");
-  }
-}
 
 const std::string InverterDevice::ParseStatusCode(const InverterStatusCode& statusCode)
 {
   switch(statusCode)
   {
     case InverterStatusCode::CONNECTED_IDLE: return std::string("CONNECTED_IDLE");
-    case InverterStatusCode::CONNECTED_THROTTLED: return std::string("CONNECTED_THROTTLED");
-    case InverterStatusCode::DISCONNECTED: return std::string("DISCONNECTED");
-    default: return std::string("");
-  }
-}
-
-const std::string PowerMeterDevice::ParseErrorCode(const PowerMeterErrorCode& errorCode)
-{
-  switch(errorCode)
-  {
-    case PowerMeterErrorCode::NOERROR: return std::string("NOERROR");
-    case PowerMeterErrorCode::DISCONNECTED_BUS_ERROR: return std::string("DISCONNECTED_BUS_ERROR");
+    case InverterStatusCode::CONNECTED_RUNNING: return std::string("CONNECTED_RUNNING");
+    case InverterStatusCode::DISCONNECTED_BUS_ERROR: return std::string("DISCONNECTED_BUS_ERROR");
     default: return std::string("");
   }
 }
@@ -121,7 +101,28 @@ int SchneiderPM5110Meter::ReadMeasurements()
     m_data.frequency = frequency[0];
   }
 
+  /* update the state based on the measurements */
+  UpdateState();
+
   return 0;      
+}
+
+void SchneiderPM5110Meter::UpdateState()
+{
+  const DeviceConnection connectionState = m_connChecker.GetConnState();
+  switch(connectionState)
+  {
+    case DeviceConnection::CONNECTED:
+    {
+      m_data.powerMeterStatus = PowerMeterStatusCode::CONNECTED;
+      break;
+    }
+    case DeviceConnection::DISCONNECTED:
+    {
+      m_data.powerMeterStatus = PowerMeterStatusCode::DISCONNECTED;
+      break;
+    }
+  }
 }
 
 int FroniusIgPlus::Initialize(const json& config)
@@ -200,7 +201,64 @@ int FroniusIgPlus::ReadMeasurements()
   m_data.currentDc = static_cast<float>(dc1[0]) + static_cast<float>(dc2[0]);
   m_data.voltageDc = (static_cast<float>(dc1[1]) + static_cast<float>(dc2[1])) / 2;
   m_data.powerDc = static_cast<float>(dc1[0]) * static_cast<float>(dc1[1]) + static_cast<float>(dc2[0]) * static_cast<float>(dc2[1]);
+  
+  UpdateState();
+
   return 0;
+}
+
+void FroniusIgPlus::UpdateState()
+{
+  std::vector<uint16_t> statusReg = m_commPort->ReadHoldingRegister<uint16_t>(statusRegBase, 1, m_address);
+  if(statusReg.size() != 1)
+  {
+    m_connChecker.OnDevicesAccess(false);
+  }
+  else
+  {
+    m_connChecker.OnDevicesAccess(true);
+    const DeviceConnection connState = m_connChecker.GetConnState();
+    if(connState == DeviceConnection::CONNECTED)
+    {
+      switch(statusReg[0])
+      {
+        case 1: /* STATUS_OFF */
+        {
+          m_data.inverterStatus = InverterStatusCode::CONNECTED_IDLE;
+          break;
+        }
+        case 3:
+        {
+          m_data.inverterStatus = InverterStatusCode::CONNECTED_IDLE;
+          break;
+        }
+        case 4:
+        {
+          m_data.inverterStatus = InverterStatusCode::CONNECTED_RUNNING;
+          break;
+        }
+        case 5:
+        {
+          m_data.inverterStatus = InverterStatusCode::CONNECTED_RUNNING;
+          break;
+        }
+        case 7:
+        {
+          m_data.inverterStatus = InverterStatusCode::CONNECTED_RUNNING;
+          break;
+        }
+        case 8:
+        {
+          m_data.inverterStatus = InverterStatusCode::CONNECTED_IDLE;
+          break;
+        }
+      }
+    } 
+    else if(connState == DeviceConnection::DISCONNECTED)
+    {
+      m_data.inverterStatus = InverterStatusCode::DISCONNECTED_BUS_ERROR;
+    }
+  }
 }
 
 void FroniusIgPlus::UpdatePower(float powerSetpoint)
@@ -274,6 +332,29 @@ int Tesla::ReadMeasurements()
     return 0;
   }
 } 
+
+void Tesla::UpdateState()
+{
+  std::vector<uint16_t> statusReg = m_commPort->ReadHoldingRegister<uint16_t>(statusMeasurementRegBase, 1, m_address);
+  if(statusReg.size() != 2)
+  {
+    m_connChecker.OnDevicesAccess(false);
+  }
+  else
+  {
+    m_connChecker.OnDevicesAccess(true);
+    const DeviceConnection connState = m_connChecker.GetConnState();
+    if(connState == DeviceConnection::CONNECTED)
+    {
+      /* TODO: work this out with Varsányi*/
+      m_data.inverterStatus = InverterStatusCode::CONNECTED_IDLE;
+    } 
+    else if(connState == DeviceConnection::DISCONNECTED)
+    {
+      m_data.inverterStatus = InverterStatusCode::DISCONNECTED_BUS_ERROR;
+    }
+  }
+}
 
 void Tesla::UpdatePower(float powerSetpoint)
 {

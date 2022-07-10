@@ -21,11 +21,6 @@ enum class PowerMeterStatusCode {
   DISCONNECTED
 };
 
-enum class PowerMeterErrorCode {
-  NOERROR,
-  DISCONNECTED_BUS_ERROR
-};
-
 struct PowerMeterData {
 public:
   PowerMeterData(){} 
@@ -56,20 +51,15 @@ public:
 
   float frequency = 0;
   PowerMeterStatusCode powerMeterStatus = PowerMeterStatusCode::DISCONNECTED;
-  PowerMeterErrorCode powerMeterError = PowerMeterErrorCode::NOERROR;
 };
 
 enum class InverterStatusCode {
   CONNECTED_IDLE,
-  CONNECTED_THROTTLED,
-  DISCONNECTED
+  CONNECTED_RUNNING,
+  CONNECTED_FAULT,
+  DISCONNECTED_BUS_ERROR,
 };
 
-enum class InverterErrorCode {
-  NOERROR,
-  DISCONNECTED_BUS_ERROR,
-  OVERHEATED
-};
 struct InverterData {
 public:
   std::string assetId = "";
@@ -95,8 +85,7 @@ public:
   float frequency;
 
   float inverterTemperature;
-  InverterStatusCode inverterStatus = InverterStatusCode::DISCONNECTED;
-  InverterErrorCode inverterError = InverterErrorCode::NOERROR;
+  InverterStatusCode inverterStatus = InverterStatusCode::DISCONNECTED_BUS_ERROR;
 };
 
 enum class DeviceConnection {
@@ -156,6 +145,7 @@ protected:
 public:
   BaseDevice(const DeviceConnectionChecker& checker) : m_connChecker(checker) {}
   virtual int ReadMeasurements() = 0;
+  virtual void UpdateState() = 0;
   const DeviceConnection GetConnState() const {return m_connChecker.GetConnState();}
 };
 
@@ -167,8 +157,8 @@ public:
   void SetAssetId(const std::string& assetId){m_data.assetId = assetId;}
   virtual int Initialize(const json& config) = 0;
   virtual int ReadMeasurements() = 0;
-  virtual PowerMeterData GetPowerMeterData() const {return m_data;};
-  static const std::string ParseErrorCode(const PowerMeterErrorCode& errorCode);
+  virtual void UpdateState() = 0;
+  virtual PowerMeterData GetPowerMeterData() = 0;
   static const std::string ParseStatusCode(const PowerMeterStatusCode& statusCode);
   virtual void SetDataMutex(std::shared_ptr<std::shared_mutex> mutex){m_data.dataMutex = mutex;}
 };
@@ -204,6 +194,7 @@ public:
   {m_type = Devicetype::powerMeter; m_data.deviceModel = "scheinderPM5110";}
   virtual int Initialize(const json& config) override;
   virtual int ReadMeasurements() override;
+  virtual void UpdateState() override;
   virtual PowerMeterData GetPowerMeterData() {return m_data;}
 
   void SetCommPort(std::shared_ptr<ModbusPort> commPort) {m_commPort = commPort;}
@@ -218,6 +209,7 @@ public:
   void SetAssetId(const std::string& assetId){m_data.assetId = assetId;}
   virtual int Initialize(const json& config) = 0;
   virtual int ReadMeasurements() = 0;
+  virtual void UpdateState() = 0;
   const InverterData GetInverterData()
   {
     InverterData data;
@@ -226,7 +218,6 @@ public:
     m_data.dataMutex->unlock_shared();
     return data;
   }
-  static const std::string ParseErrorCode(const InverterErrorCode& errorCode);
   static const std::string ParseStatusCode(const InverterStatusCode& statusCode);
   virtual void UpdatePower(float powerSetpoint) = 0;
   virtual void SetDataMutex(std::shared_ptr<std::shared_mutex> mutex){m_data.dataMutex = mutex;}
@@ -241,6 +232,7 @@ private:
   static constexpr int acCurrentRegBase = 40071;
   static constexpr int acVoltageBase = 40079;
   static constexpr int acPowerBase = 40083;
+  static constexpr int statusRegBase = 40107;
   static constexpr int powerSetpointRegBase = 40232;
   static constexpr int throttleEnableRegBase = 40236;
   static constexpr int dcValues1Base = 40272;
@@ -249,6 +241,7 @@ public:
   FroniusIgPlus(const DeviceConnectionChecker& checker = DeviceConnectionChecker()) : InverterDevice(checker)
   {m_type = Devicetype::inverter; m_data.deviceModel = "froniusIGPlus";}
   virtual int Initialize(const json& config) override;
+  virtual void UpdateState() override;
   virtual int ReadMeasurements() override;
   virtual void UpdatePower(float powerSetpoint) override;
 
@@ -271,6 +264,7 @@ public:
   Tesla(const DeviceConnectionChecker& checker = DeviceConnectionChecker()) : InverterDevice(checker)
   {m_type = Devicetype::inverter; m_data.deviceModel = "tesla";}
   virtual int Initialize(const json& config) override;
+  virtual void UpdateState() override;
   virtual int ReadMeasurements() override;
   virtual void UpdatePower(float powerSetpoint) override;
 
