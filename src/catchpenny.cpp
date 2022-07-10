@@ -201,6 +201,8 @@ bool Catchpenny::UpdateControl()
     default:
       break;
   }
+
+  return true;
 }
 
 void Catchpenny::DoCellProtectionLogic()
@@ -357,6 +359,30 @@ float Battery::GetAvailableDischargeStorage()
   return m_data.stateOfCharge * m_batteryCapacity * 0.01;
 }
 
+const std::string Battery::ParseStatusCode(const BatteryStatusCode& status)
+{
+  switch(status)
+  {
+    case BatteryStatusCode::CONNECTED_OK: return std::string("CONNECTED_OK");
+    case BatteryStatusCode::CONNECTED_ERROR: return std::string("CONNECTED_ERROR");
+    case BatteryStatusCode::DISCONNECTED: return std::string("DISCONNECTED");
+    default: return std::string("");
+  }
+}
+
+const std::string Battery::ParseErrorCode(const BatteryErrorCode& error)
+{
+  switch(error)
+  {
+    case BatteryErrorCode::NOERROR: return std::string("NOERROR");
+    case BatteryErrorCode::OVERVOLTAGE_ERROR: return std::string("OVERVOLTAGE_ERROR");
+    case BatteryErrorCode::UNDERVOLTAGE_ERROR: return std::string("UNDERVOLTAGE_ERROR");
+    case BatteryErrorCode::OVERTEMPERATURE_ERROR: return std::string("OVERTEMPERATURE_ERROR");
+    case BatteryErrorCode::UNDERTEMPERATURE_ERROR: return std::string("UNDERTEMPERATURE_ERROR");
+    default: return std::string("");
+  }
+}
+
 void CatchpennyModbusTcpServer::Initialize(const std::string& ip, const std::string& port)
 {
   /* setup the server and the buffered slave*/
@@ -492,8 +518,8 @@ void CatchpennyModbusTcpServer::UpdateRegisters()
     
     if(batteryData.size() == 2)
     {
-      Modbus::Data<uint32_t> batterStatus[2] = {batteryData[0].batteryStatus, batteryData[0].batteryError};
-      m_bufferSlave->writeInputRegisters(BATTERY_STATUS_REG, batterStatus, 2);
+      //Modbus::Data<uint32_t> batterStatus[2] = {batteryData[0].batteryStatus, batteryData[0].batteryError};
+      //m_bufferSlave->writeInputRegisters(BATTERY_STATUS_REG, batterStatus, 2);
 
       CatchpennyConfig config = m_catchpenny->GetCpConfig();
       Modbus::Data<float> cpConfigReg[4] = {config.maxChargeVoltage, config.minDischargeVoltage,

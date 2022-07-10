@@ -2,58 +2,46 @@
 
 const std::string InverterDevice::ParseErrorCode(const InverterErrorCode& errorCode)
 {
-  std::string ret;
   switch(errorCode)
   {
-    case InverterErrorCode::NOERROR:
-    {
-      ret = "NOERROR";
-      break;
-    }
-    case InverterErrorCode::DISCONNECTED_BUS_ERROR:
-    {
-      ret = "DISCONNECTED_BUS_ERROR";
-      break;
-    }
-    case InverterErrorCode::OVERHEATED:
-    {
-      ret = "OVERHEATED";
-      break;
-    }
-    default:
-    {
-      ret = "";
-      break;
-    }
+    case InverterErrorCode::NOERROR: return std::string("NOERROR");
+    case InverterErrorCode::DISCONNECTED_BUS_ERROR: return std::string("DISCONNECTED_BUS_ERROR");
+    case InverterErrorCode::OVERHEATED: return std::string("OVERHEATED");
+    default: return std::string("");
   }
-
-  return ret;
 }
 
 const std::string InverterDevice::ParseStatusCode(const InverterStatusCode& statusCode)
 {
-  std::string ret;
   switch(statusCode)
   {
-    case InverterStatusCode::CONNECTED_IDLE:
-    {
-      ret = "CONNECTED_IDLE";
-      break;
-    }
-    case InverterStatusCode::CONNECTED_THROTTLED:
-    {
-      ret = "CONNECTED_THROTTLED";
-      break;
-    }
-    case InverterStatusCode::DISCONNECTED:
-    {
-      ret = "DISCONNECTED";
-      break;
-    }
+    case InverterStatusCode::CONNECTED_IDLE: return std::string("CONNECTED_IDLE");
+    case InverterStatusCode::CONNECTED_THROTTLED: return std::string("CONNECTED_THROTTLED");
+    case InverterStatusCode::DISCONNECTED: return std::string("DISCONNECTED");
+    default: return std::string("");
   }
-
-  return ret;
 }
+
+const std::string PowerMeterDevice::ParseErrorCode(const PowerMeterErrorCode& errorCode)
+{
+  switch(errorCode)
+  {
+    case PowerMeterErrorCode::NOERROR: return std::string("NOERROR");
+    case PowerMeterErrorCode::DISCONNECTED_BUS_ERROR: return std::string("DISCONNECTED_BUS_ERROR");
+    default: return std::string("");
+  }
+}
+
+const std::string PowerMeterDevice::ParseStatusCode(const PowerMeterStatusCode& statusCode)
+{
+  switch(statusCode)
+  {
+    case PowerMeterStatusCode::CONNECTED: return std::string("CONNECTED");
+    case PowerMeterStatusCode::DISCONNECTED: return std::string("DISCONNECTED");
+    default: return std::string("");
+  }
+}
+
 int SchneiderPM5110Meter::Initialize(const json& config) 
 {
   m_address = config.at("address").get<int>();
@@ -287,7 +275,7 @@ bool DeviceContainer::ContainsPowerMeterDevice(const std::string& assetId)
 {
   for(const auto device : m_powerMeterContainer)
   {
-    if(device->GetAssetId() == assetId)
+    if(device->GetPowerMeterData().assetId == assetId)
       return true;
   }
 
@@ -298,7 +286,7 @@ bool DeviceContainer::ContainsInverterDevice(const std::string& assetId)
 {
   for(const auto device : m_inverterContainer)
   {
-    if(device->GetAssetId() == assetId)
+    if(device->GetInverterData().assetId == assetId)
       return true;
   }
 
@@ -309,23 +297,45 @@ const PowerMeterData DeviceContainer::GetPowerMeterDeviceData(const std::string&
 {
   for(const auto device : m_powerMeterContainer)
   {
-    if(device->GetAssetId() == assetId)
+    if(device->GetPowerMeterData().assetId == assetId)
       return device->GetPowerMeterData();
   }
   PowerMeterData data;
   return data;
 }
 
+const PowerMeterData DeviceContainer::GetPowerMeterDeviceData(const int& powerMeterNumber) const 
+{
+  if(powerMeterNumber < m_powerMeterContainer.size())
+  {
+    return m_powerMeterContainer[powerMeterNumber]->GetPowerMeterData();
+  }
+  else
+    return PowerMeterData();
+}
+
 const InverterData DeviceContainer::GetInverterDeviceData(const std::string& assetId) const 
 {
   for(const auto device : m_inverterContainer)
   {
-    if(device->GetAssetId() == assetId)
+    if(device->GetInverterData().assetId == assetId)
       return device->GetInverterData();
   }
 
   InverterData data;
   return data;
+}
+
+const InverterData DeviceContainer::GetInverterDeviceData(const int& inverterNumber) const 
+{
+  if(inverterNumber < m_inverterContainer.size())
+  {
+    return m_inverterContainer[inverterNumber]->GetInverterData();
+  }
+  else
+  {
+    return InverterData();
+  }
 }
   
 void DeviceConnectionChecker::OnDevicesAccess(bool eventType)

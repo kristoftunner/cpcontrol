@@ -44,10 +44,7 @@ std::vector<T> ModbusPort::ReadHoldingRegister(int baseAddress, int number, int 
       return result;
     }
   }
-  else
-  {
-    return result;
-  }
+  return result;
 }
 
 template<class T>

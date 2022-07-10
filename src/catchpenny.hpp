@@ -42,8 +42,23 @@ struct Cell {
   float temperature, voltage, capacity;
 };
 
+/* TODO: use these error and status codes */
+enum class BatteryStatusCode {
+  CONNECTED_OK,
+  CONNECTED_ERROR,
+  DISCONNECTED
+};
+
+enum class BatteryErrorCode {
+  NOERROR,
+  OVERVOLTAGE_ERROR,
+  UNDERVOLTAGE_ERROR,
+  OVERTEMPERATURE_ERROR,
+  UNDERTEMPERATURE_ERROR
+};
+
 struct BatteryPackMetaData {
-  std::string deviceType = "cona";
+  std::string deviceModel = "cona";
   float minCellVoltage = 0;
   float maxCellVoltage = 0;
   float averageCellVoltage = 0;
@@ -56,8 +71,8 @@ struct BatteryPackMetaData {
   float stateOfHealth = 0;
   float storedEnergy = 0;
   float stateOfCharge = 0;
-  uint32_t batteryStatus = 0;
-  uint32_t batteryError = 0;
+  BatteryStatusCode batteryStatus = BatteryStatusCode::DISCONNECTED;
+  BatteryErrorCode batteryError = BatteryErrorCode::NOERROR;
   std::shared_ptr<std::shared_mutex> dataMutex;
 };
 
@@ -83,10 +98,11 @@ public:
   bool CheckUnderVoltage();
   bool CheckOverTemperature();
   bool CheckUnderTemperature();
-  const Cell& GetCell(int index);
   int ReadMeasurements();
-
+  static const std::string ParseStatusCode(const BatteryStatusCode& status);
+  static const std::string ParseErrorCode(const BatteryErrorCode& error);
   /* Getters and setter */
+  const Cell& GetCell(int index);
   float GetAvailableChargeStorage();    // in kWh
   float GetAvailableDischargeStorage(); // in kWh
   const BatteryPackMetaData GetBatterMetaData();

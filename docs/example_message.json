@@ -155,9 +155,11 @@
 // response topic:/<catchpenny number>/ManagedDevices - response message from catchpenny(server side: SUB)
 {
   "id" : 0,
-  "chargers" : [
-    {"assetId" : "asd", "type" : "powerMeter", "model" : "schneiderPM5110", "state" : "CONNECTED"},
-    {"assetId" : "asd", "type" : "inverter", "model" : "growattSUN2000", "state" : "CONNECTED_IDLE"}
+  "powerMeters" : [
+    {"assetId" : "asd", "model" : "schneiderPM5110", "state" : "CONNECTED"},
+  ],
+  "inverters" : [
+    {"assetId" : "asd", "model" : "growattSUN2000", "state" : "CONNECTED_IDLE"}
   ]
 }  
 
@@ -169,7 +171,7 @@
 // response topic: /<catchpenny number>/PowerMeterData - response message from catchpenny(server side: SUB)
 {
   "assetId" : "lkq34alo",   // generated string passed to the system via json config
-  "deviceType" : "scneiderM5110",
+  "deviceModel" : "scneiderM5110",
   "powerAcL1" : 1111.1,
   "powerAcL2" : 1111.1,
   "powerAcL3" : 1111.1,
@@ -196,7 +198,7 @@
 // response topic: /<catchpenny number>/InverterData - response message from catchpenny(server side: SUB)
 {
   "assetId" : "lkq34alo",   // generated string passed to the system via json config
-  "deviceType" : "scneiderM5110",
+  "deviceModel" : "scneiderM5110",
   "powerTotal" : 3333.3,
   "powerAcL1" : 1111.1,
   "powerAcL2" : 1111.1,

@@ -152,23 +152,28 @@ std::vector<MqttMessage> MqttMessageResponder::ActOnMessage(const MqttMessage& m
     {
       const InverterData data = m_catchpenny->GetChargerData(i);
       const std::string status = InverterDevice::ParseStatusCode(data.inverterStatus);
-      json singleCharger = {{"id", i}, {"model", data.deviceType}, {"status", status}};
+      json singleCharger = {{"id", i}, {"model", data.deviceModel}, {"status", status}};
       chargerArray.emplace_back(singleCharger);
     }
     for(int i = 0; i < numberOfDischargers; i++)
     {
       const InverterData data = m_catchpenny->GetDischargerData(i);
       const std::string status = InverterDevice::ParseStatusCode(data.inverterStatus);
-      json singleDischarger = {{"id", i}, {"model", data.deviceType}, {"status", status}};
+      json singleDischarger = {{"id", i}, {"model", data.deviceModel}, {"status", status}};
       dischargerArray.emplace_back(singleDischarger);
     }
     for(int i = 0; i < numberOfBatteries; i++)
     {
-      const BatteryPackMetaData data = m_catchpenny->GetBatteryData();
-      json singleBattery = {{"id", i}, {"model", data.deviceType}, {"status", status}};
-      chargerArray.emplace_back(singleCharger);
+      const BatteryPackMetaData data = m_catchpenny->GetBatteryData(i);
+      const std::string status = Battery::ParseStatusCode(data.batteryStatus);
+      json singleBattery = {{"id", i}, {"model", data.deviceModel}, {"status", }};
+      batteryArray.emplace_back(singleBattery);
     }
-  
+    
+    responseMessage["chargers"] = chargerArray;
+    responseMessage["dischargers"] = dischargerArray;
+    responseMessage["batteries"] = batteryArray;
+    ret.push_back({std::string("CatchpennyDevices"), responseMessage});
   }
   else if(message.topic == "PowerRequest")
   {
@@ -254,6 +259,41 @@ std::vector<MqttMessage> MqttMessageResponder::ActOnMessage(const MqttMessage& m
     };
     ret.push_back({std::string("BatteryData"), responseMessage});
   }
+  else if(message.topic == "GetManagedDevices")
+  {
+    const int numberOfPowermeters = m_container->GetNumberOfPowerMeters(); 
+    const int numberOfInverters = m_container->GetNumberOfInverters();
+    json inverterArray = json::array();
+    json powerMeterArray = json::array();
+
+    for(int i = 0; i < numberOfPowermeters; i++)
+    {
+      const PowerMeterData data = m_container->GetPowerMeterDeviceData(i);
+      const std::string status = PowerMeterDevice::ParseStatusCode(data.powerMeterStatus);
+      json singlePowerMeter = {
+        {"assetId", data.assetId},
+        {"model", data.deviceModel},
+        {"status", status}
+      };
+      powerMeterArray.emplace_back(singlePowerMeter);
+    }
+    for(int i = 0; i < numberOfInverters; i++)
+    {
+      const InverterData data = m_container->GetInverterDeviceData(i);
+      const std::string status = InverterDevice::ParseStatusCode(data.inverterStatus);
+      json singleInverter = {
+        {"assetId", data.assetId},
+        {"model", data.deviceModel},
+        {"status", status}
+      };
+      inverterArray.emplace_back(singleInverter);
+    }
+
+    json responseMessage = {{"id",0}};
+    responseMessage["powerMeters"] = powerMeterArray;
+    responseMessage["inverters"] = inverterArray;
+    ret.push_back({std::string("ManagedDevices"), responseMessage});
+  }
   else if(message.topic == "GetPowerMeterData")
   {
     const std::string assetId = message.message.at("assetId").get<std::string>();
@@ -262,7 +302,7 @@ std::vector<MqttMessage> MqttMessageResponder::ActOnMessage(const MqttMessage& m
       PowerMeterData data = m_container->GetPowerMeterDeviceData(assetId);
       json responseMessage = {
         {"assetId", assetId},
-        {"deviceType", data.deviceType},
+        {"deviceModel", data.deviceModel},
         {"powerAcL1", data.powerAcPhase1},
         {"powerAcL2", data.powerAcPhase2},
         {"powerAcL3", data.powerAcPhase3},
@@ -291,7 +331,7 @@ std::vector<MqttMessage> MqttMessageResponder::ActOnMessage(const MqttMessage& m
       InverterData data = m_container->GetInverterDeviceData(assetId);
       json responseMessage = {
         {"assetId", assetId},
-        {"deviceType", data.deviceType},
+        {"deviceModel", data.deviceModel},
         {"powerAcL1", data.powerAcPhase1},
         {"powerAcL2", data.powerAcPhase2},
         {"powerAcL3", data.powerAcPhase3},

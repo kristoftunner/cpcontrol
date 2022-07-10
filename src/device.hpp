@@ -16,12 +16,22 @@ enum class Devicetype {
   heatpump
 };
 
+enum class PowerMeterStatusCode {
+  CONNECTED,
+  DISCONNECTED
+};
+
+enum class PowerMeterErrorCode {
+  NOERROR,
+  DISCONNECTED_BUS_ERROR
+};
+
 struct PowerMeterData {
 public:
   PowerMeterData(){} 
-
+  std::string assetId = "";
   std::shared_ptr<std::shared_mutex> dataMutex;
-  std::string deviceType;
+  std::string deviceModel = "";
   float powerAcTotal = 0;
   float powerAcPhase1 = 0;
   float powerAcPhase2 = 0;
@@ -45,6 +55,8 @@ public:
   float voltageAcPhase3 = 0; 
 
   float frequency = 0;
+  PowerMeterStatusCode powerMeterStatus = PowerMeterStatusCode::DISCONNECTED;
+  PowerMeterErrorCode powerMeterError = PowerMeterErrorCode::NOERROR;
 };
 
 enum class InverterStatusCode {
@@ -60,7 +72,9 @@ enum class InverterErrorCode {
 };
 struct InverterData {
 public:
-  std::string deviceType;
+  std::string assetId = "";
+  std::shared_ptr<std::shared_mutex> dataMutex;
+  std::string deviceModel = "";
   float powerDc = 0;
   float currentDc = 0;
   float voltageDc = 0;
@@ -83,7 +97,6 @@ public:
   float inverterTemperature;
   InverterStatusCode inverterStatus = InverterStatusCode::DISCONNECTED;
   InverterErrorCode inverterError = InverterErrorCode::NOERROR;
-  std::shared_ptr<std::shared_mutex> dataMutex;
 };
 
 enum class DeviceConnection {
@@ -138,14 +151,11 @@ private:
 class BaseDevice
 {
 protected:
-  std::string m_assetId;
   Devicetype m_type;
   DeviceConnectionChecker m_connChecker;
 public:
-  BaseDevice(const DeviceConnectionChecker& checker) : m_assetId(""), m_connChecker(checker) {}
+  BaseDevice(const DeviceConnectionChecker& checker) : m_connChecker(checker) {}
   virtual int ReadMeasurements() = 0;
-  virtual void SetAssetId(std::string assetId){m_assetId = assetId;}
-  const std::string GetAssetId() const {return m_assetId;}
   const DeviceConnection GetConnState() const {return m_connChecker.GetConnState();}
 };
 
@@ -154,9 +164,12 @@ protected:
   PowerMeterData m_data;
 public:
   PowerMeterDevice(const DeviceConnectionChecker& checker) :BaseDevice(checker) {m_type = Devicetype::powerMeter;}
+  void SetAssetId(const std::string& assetId){m_data.assetId = assetId;}
   virtual int Initialize(const json& config) = 0;
-  virtual int ReadMeasurements() override {};
+  virtual int ReadMeasurements() = 0;
   virtual PowerMeterData GetPowerMeterData() const {return m_data;};
+  static const std::string ParseErrorCode(const PowerMeterErrorCode& errorCode);
+  static const std::string ParseStatusCode(const PowerMeterStatusCode& statusCode);
   virtual void SetDataMutex(std::shared_ptr<std::shared_mutex> mutex){m_data.dataMutex = mutex;}
 };
 
@@ -187,7 +200,8 @@ private:
   std::shared_ptr<ModbusPort> m_commPort;
   int m_address;
 public:
-  SchneiderPM5110Meter(const DeviceConnectionChecker& checker = DeviceConnectionChecker()) : PowerMeterDevice(checker){m_type = Devicetype::powerMeter;}
+  SchneiderPM5110Meter(const DeviceConnectionChecker& checker = DeviceConnectionChecker()) : PowerMeterDevice(checker)
+  {m_type = Devicetype::powerMeter; m_data.deviceModel = "scheinderPM5110";}
   virtual int Initialize(const json& config) override;
   virtual int ReadMeasurements() override;
   virtual PowerMeterData GetPowerMeterData() {return m_data;}
@@ -201,8 +215,9 @@ protected:
 public:
   InverterDevice(const DeviceConnectionChecker& checker) : BaseDevice(checker){m_type = Devicetype::inverter;}
 
+  void SetAssetId(const std::string& assetId){m_data.assetId = assetId;}
   virtual int Initialize(const json& config) = 0;
-  virtual int ReadMeasurements() override {return 0;};
+  virtual int ReadMeasurements() = 0;
   const InverterData GetInverterData()
   {
     InverterData data;
@@ -231,7 +246,8 @@ private:
   static constexpr int dcValues1Base = 40272;
   static constexpr int dcValues2Base = 40292;
 public:
-  FroniusIgPlus(const DeviceConnectionChecker& checker = DeviceConnectionChecker()) : InverterDevice(checker){}
+  FroniusIgPlus(const DeviceConnectionChecker& checker = DeviceConnectionChecker()) : InverterDevice(checker)
+  {m_type = Devicetype::inverter; m_data.deviceModel = "froniusIGPlus";}
   virtual int Initialize(const json& config) override;
   virtual int ReadMeasurements() override;
   virtual void UpdatePower(float powerSetpoint) override;
@@ -252,7 +268,8 @@ private:
   static constexpr int statusMeasurementRegBase = 191;
   static constexpr int waterTemperatureBase = 206;
 public:
-  Tesla(const DeviceConnectionChecker& checker = DeviceConnectionChecker()) : InverterDevice(checker){}
+  Tesla(const DeviceConnectionChecker& checker = DeviceConnectionChecker()) : InverterDevice(checker)
+  {m_type = Devicetype::inverter; m_data.deviceModel = "tesla";}
   virtual int Initialize(const json& config) override;
   virtual int ReadMeasurements() override;
   virtual void UpdatePower(float powerSetpoint) override;
@@ -262,6 +279,7 @@ public:
 
 class DeviceContainer {
 private:
+  /* TODO: make this map or unordered_map in the future */
   std::vector<PowerMeterDevice*> m_powerMeterContainer;
   std::vector<InverterDevice*> m_inverterContainer;
   
@@ -287,7 +305,11 @@ public:
   bool ContainsPowerMeterDevice(const std::string& assetId);
   bool ContainsInverterDevice(const std::string& assetId);
   const PowerMeterData GetPowerMeterDeviceData(const std::string& assetId) const;
-  const InverterData GetInverterDeviceData(const std::string& assetId) const ;
+  const PowerMeterData GetPowerMeterDeviceData(const int& powerMeterNumber) const;
+  const InverterData GetInverterDeviceData(const std::string& assetId) const;
+  const InverterData GetInverterDeviceData(const int& inverterNumber) const;
+  const int GetNumberOfPowerMeters()const {return m_powerMeterContainer.size();}
+  const int GetNumberOfInverters() const {return m_inverterContainer.size();}
 };
 
 template<int (PowerMeterDevice::*functor)()>
