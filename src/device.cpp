@@ -60,6 +60,7 @@ int SchneiderPM5110Meter::ReadMeasurements()
   }
   else
   {
+    m_connChecker.OnDevicesAccess(true);
     m_data.currentAcPhase1 = currentValues[0];
     m_data.currentAcPhase2 = currentValues[1];
     m_data.currentAcPhase3 = currentValues[2];
@@ -75,6 +76,7 @@ int SchneiderPM5110Meter::ReadMeasurements()
   }
   else
   {
+    m_connChecker.OnDevicesAccess(true);
     m_data.voltageAcPhase1 = voltageValues[0];
     m_data.voltageAcPhase2 = voltageValues[1];
     m_data.voltageAcPhase3 = voltageValues[2];
@@ -90,6 +92,7 @@ int SchneiderPM5110Meter::ReadMeasurements()
   }
   else
   {
+    m_connChecker.OnDevicesAccess(true);
     m_data.powerAcPhase1 = powerValues[0];
     m_data.powerAcPhase2 = powerValues[1];
     m_data.powerAcPhase3 = powerValues[2];
@@ -107,12 +110,14 @@ int SchneiderPM5110Meter::ReadMeasurements()
   std::vector<float> frequency = m_commPort->ReadHoldingRegister<float>(frequencyReg,1,m_address);
   if(frequency.size() != 1)
   {
+    m_connChecker.OnDevicesAccess(false);
     //const Error error = {ErrorType::ERROR_MODBUS_READ, ErrorSeverityLevel::ERROR_WARNING};
     //m_et->PushBackError(error);
     return 1;
   }
   else
   {
+    m_connChecker.OnDevicesAccess(true);
     m_data.frequency = frequency[0];
   }
 
@@ -130,12 +135,14 @@ int FroniusIgPlus::ReadMeasurements()
   std::vector<uint16_t> currentValues = m_commPort->ReadHoldingRegister<uint16_t>(acCurrentRegBase,5,m_address);
   if(currentValues.size() != 5)
   {
+    m_connChecker.OnDevicesAccess(false);
     //const Error error = {ErrorType::ERROR_MODBUS_READ, ErrorSeverityLevel::ERROR_WARNING};
     //m_et->PushBackError(error);
     return 1;
   }
   else
   {
+    m_connChecker.OnDevicesAccess(true);
     float scaleFactor = static_cast<float>(static_cast<int16_t>(currentValues[4]));
     m_data.currentAcPhase1 = static_cast<float>(currentValues[1]) * pow(10, scaleFactor);
     m_data.currentAcPhase2 = static_cast<float>(currentValues[2]) * pow(10, scaleFactor);
@@ -145,6 +152,7 @@ int FroniusIgPlus::ReadMeasurements()
   std::vector<uint16_t> voltageAndPowerValues = m_commPort->ReadHoldingRegister<uint16_t>(acVoltageBase,14,m_address);
   if(voltageAndPowerValues.size() != 14)
   {
+    m_connChecker.OnDevicesAccess(false);
     //const Error error = {ErrorType::ERROR_MODBUS_READ, ErrorSeverityLevel::ERROR_WARNING};
     //m_et->PushBackError(error);
     return 1;
@@ -152,6 +160,7 @@ int FroniusIgPlus::ReadMeasurements()
   else
   {
     /* scale values */
+    m_connChecker.OnDevicesAccess(true);
     float voltageScale = static_cast<float>(static_cast<int16_t>(voltageAndPowerValues[3]));
     float acPowerScale = static_cast<float>(static_cast<int16_t>(voltageAndPowerValues[5]));
     float acFrequencyScale = static_cast<float>(static_cast<int16_t>(voltageAndPowerValues[7]));
@@ -173,6 +182,7 @@ int FroniusIgPlus::ReadMeasurements()
   std::vector<uint16_t> dc1 = m_commPort->ReadHoldingRegister<uint16_t>(dcValues1Base,2,m_address);
   if(dc1.size() != 2)
   {
+    m_connChecker.OnDevicesAccess(false);
     //const Error error = {ErrorType::ERROR_MODBUS_READ, ErrorSeverityLevel::ERROR_WARNING};
     //m_et->PushBackError(error);
     return 1;
@@ -180,11 +190,13 @@ int FroniusIgPlus::ReadMeasurements()
   std::vector<uint16_t> dc2 = m_commPort->ReadHoldingRegister<uint16_t>(dcValues2Base,2,m_address);
   if(dc1.size() != 2)
   {
+    m_connChecker.OnDevicesAccess(false);
     //const Error error = {ErrorType::ERROR_MODBUS_READ, ErrorSeverityLevel::ERROR_WARNING};
     //m_et->PushBackError(error);
     return 1;
   }
 
+  m_connChecker.OnDevicesAccess(true);
   m_data.currentDc = static_cast<float>(dc1[0]) + static_cast<float>(dc2[0]);
   m_data.voltageDc = (static_cast<float>(dc1[1]) + static_cast<float>(dc2[1])) / 2;
   m_data.powerDc = static_cast<float>(dc1[0]) * static_cast<float>(dc1[1]) + static_cast<float>(dc2[0]) * static_cast<float>(dc2[1]);
@@ -204,14 +216,20 @@ void FroniusIgPlus::UpdatePower(float powerSetpoint)
     uint16_t percentSetPoint = static_cast<uint16_t>(powerSetpoint / maxContinuousPower * 100);
     if(m_commPort->WriteSingleRegister(powerSetpointRegBase, percentSetPoint, m_address) == false)
     {
+      m_connChecker.OnDevicesAccess(false);
       //const Error error = {ErrorType::ERROR_MODBUS_WRITE, ErrorSeverityLevel::ERROR_WARNING};
       //m_et->PushBackError(error);
     }
+    else
+      m_connChecker.OnDevicesAccess(true);
     if(m_commPort->WriteSingleRegister(throttleEnableRegBase, 1, m_address) == false)
     {
+      m_connChecker.OnDevicesAccess(false);
       //const Error error = {ErrorType::ERROR_MODBUS_WRITE, ErrorSeverityLevel::ERROR_WARNING};
       //m_et->PushBackError(error);
     }
+    else
+      m_connChecker.OnDevicesAccess(true);
   }
   return ;
 }
@@ -228,12 +246,14 @@ int Tesla::ReadMeasurements()
   std::vector<uint16_t> statusMeasValues = m_commPort->ReadHoldingRegister<uint16_t>(statusMeasurementRegBase,12,m_address);
   if(statusMeasValues.size() != 12)
   {
+    m_connChecker.OnDevicesAccess(false);
     //const Error error = {ErrorType::ERROR_MODBUS_READ, ErrorSeverityLevel::ERROR_WARNING};
     //m_et->PushBackError(error);
     return 1;
   }
   else
   {
+    m_connChecker.OnDevicesAccess(true);
     m_data.voltageAcPhase1 = static_cast<float>(statusMeasValues[2]) * 0.01;
     m_data.voltageAcPhase2 = static_cast<float>(statusMeasValues[3]) * 0.01;
     m_data.voltageAcPhase3 = 0;
@@ -264,9 +284,12 @@ void Tesla::UpdatePower(float powerSetpoint)
     uint16_t chargeCurrent = (powerSetpoint / ((m_data.voltageAcPhase1 + m_data.voltageAcPhase2) / 2)) / 2;
     if(m_commPort->WriteSingleRegister(chargeCurrentBase, chargeCurrent, m_address) == false)
     {
+      m_connChecker.OnDevicesAccess(false);
       //const Error error = {ErrorType::ERROR_MODBUS_WRITE, ErrorSeverityLevel::ERROR_WARNING};
       //m_et->PushBackError(error);
     }
+    else
+      m_connChecker.OnDevicesAccess(true);
   }
   return;
 } 

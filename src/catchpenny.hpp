@@ -88,10 +88,10 @@ private:
   int m_address;
   float m_batteryCapacity;
   CellConfig m_cellConfig;
-  DeviceConnectionChecker m_checker;
+  DeviceConnectionChecker m_connChecker;
 public:
   Battery(const float batteryCapacity, const int cellNumber, const CellConfig cellConfig, const int address, const DeviceConnectionChecker& checker = DeviceConnectionChecker()) 
-          : m_cellConfig(cellConfig), m_batteryCapacity(batteryCapacity), m_address(address), m_checker(checker)
+          : m_cellConfig(cellConfig), m_batteryCapacity(batteryCapacity), m_address(address), m_connChecker(checker)
   {m_cells.resize(cellNumber);}
 
   bool CheckOverVoltage();
@@ -107,7 +107,7 @@ public:
   float GetAvailableDischargeStorage(); // in kWh
   const BatteryPackMetaData GetBatterMetaData();
   CellConfig GetCellConfig() const {return m_cellConfig;}
-  const DeviceConnection GetConnState() const {return m_checker.GetConnState();}
+  const DeviceConnection GetConnState() const {return m_connChecker.GetConnState();}
 
   void SetCommPort(std::shared_ptr<ModbusPort> commPort){m_commPort = commPort;};
   void SetDataMutex(std::shared_ptr<std::shared_mutex> mutex){m_data.dataMutex = mutex;}

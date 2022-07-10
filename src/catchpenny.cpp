@@ -309,13 +309,15 @@ int Battery::ReadMeasurements()
   std::vector<uint16_t> cellTemperatureValues = m_commPort->ReadHoldingRegister<uint16_t>(cellTemperaturesBaseReg,30,m_address);
   std::vector<uint16_t> cellCapacityValues = m_commPort->ReadHoldingRegister<uint16_t>(cellCapacityBaseReg,m_cells.size(),m_address);
   if(cellVoltageValues.size() != m_cells.size() && cellCapacityValues.size() != m_cells.size())  
-  { 
+  {
+    m_connChecker.OnDevicesAccess(false);
     //const Error error = {ErrorType::ERROR_MODBUS_READ, ErrorSeverityLevel::ERROR_WARNING};
     //m_et->PushBackError(error);
     return 1; 
   }
   else
   {
+    m_connChecker.OnDevicesAccess(true);
     for(size_t index; auto& voltage : cellVoltageValues)
       m_cells[index].voltage = static_cast<float>(voltage) * 0.001;
     for(size_t index; auto& capacity : cellCapacityValues)
@@ -323,12 +325,14 @@ int Battery::ReadMeasurements()
   }
   if(cellTemperatureValues.size() != 30)
   {
+    m_connChecker.OnDevicesAccess(false);
     //const Error error = {ErrorType::ERROR_MODBUS_READ, ErrorSeverityLevel::ERROR_WARNING};
     //m_et->PushBackError(error);
     return 1; 
   }
   else 
   {
+    m_connChecker.OnDevicesAccess(true);
     for(int i = 0; i < cellTemperatureValues.size()/3; i++)
     {
       m_cells[i*5].temperature   =  static_cast<float>(cellTemperatureValues[i] >> 8) - 50;

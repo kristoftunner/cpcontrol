@@ -166,7 +166,7 @@ std::vector<MqttMessage> MqttMessageResponder::ActOnMessage(const MqttMessage& m
     {
       const BatteryPackMetaData data = m_catchpenny->GetBatteryData(i);
       const std::string status = Battery::ParseStatusCode(data.batteryStatus);
-      json singleBattery = {{"id", i}, {"model", data.deviceModel}, {"status", }};
+      json singleBattery = {{"id", i}, {"model", data.deviceModel}, {"status", "CONNECTED"}};
       batteryArray.emplace_back(singleBattery);
     }
     
