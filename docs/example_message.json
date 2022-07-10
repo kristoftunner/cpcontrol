@@ -44,7 +44,25 @@
   "id" : 0,
   "registeredErrors" : 10,                // number of registered errors in the error buffer 
   "highestCriticalityLevel" : "Warning",  // can be: Info, Debug, Warning, Critical
-  "catchpennyStatus" : "None"
+  "catchpennyStatus" : "None",            // charging, discharging, halted on error
+}  
+
+// query the devices(chargers, dischargers, batteries) and their state connected to the catchpenny system
+// topic:/<catchpenny number>/GetCatchpennyDevices - message from the server(server side: PUB)
+// response topic:/<catchpenny number>/CatchpennyDevices - response message from catchpenny(server side: SUB)
+{
+  "id" : 0,
+  "chargers" : [
+    {"id" : 0, "model" : "tesla", "status" : "CONNECTED_CHARGING"},
+    {"id" : 1, "model" : "tesla", "status" : "CONNECTED_CHARGING"}
+  ],
+  "dischargers" : [
+    {"id" : 0, "model" : "fronius", "status" : "CONNECTED_IDLE"},
+    {"id" : 1, "model" : "fronius", "status" : "CONNECTED_IDLE"}
+  ],
+  "batteries" : [
+    {"id" : 0, "model" : "leaf", "status" : "CONNECTED_OK"}
+  ]
 }  
 
 // ChargerData - get the measurement and status info from the Nth charger inverter
@@ -131,6 +149,17 @@
 
 //-------------------------------------------------------------------------------------
 //Energy managment system specific topics
+
+// query the devices(powermeters, inverters) and their state connected to the managment system
+// topic:/<catchpenny number>/GetManagedDevices - message from the server(server side: PUB)
+// response topic:/<catchpenny number>/ManagedDevices - response message from catchpenny(server side: SUB)
+{
+  "id" : 0,
+  "chargers" : [
+    {"assetId" : "asd", "type" : "powerMeter", "model" : "schneiderPM5110", "state" : "CONNECTED"},
+    {"assetId" : "asd", "type" : "inverter", "model" : "growattSUN2000", "state" : "CONNECTED_IDLE"}
+  ]
+}  
 
 // PowerMeterData - get the measurement from the installed power meters
 // topic: /<catchpenny number>/GetPowerMeterData - message from server(server side: PUB)

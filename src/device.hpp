@@ -47,6 +47,17 @@ public:
   float frequency = 0;
 };
 
+enum class InverterStatusCode {
+  CONNECTED_IDLE,
+  CONNECTED_THROTTLED,
+  DISCONNECTED
+};
+
+enum class InverterErrorCode {
+  NOERROR,
+  DISCONNECTED_BUS_ERROR,
+  OVERHEATED
+};
 struct InverterData {
 public:
   std::string deviceType;
@@ -70,8 +81,8 @@ public:
   float frequency;
 
   float inverterTemperature;
-  uint32_t inverterStatus;
-  uint32_t inverterError;
+  InverterStatusCode inverterStatus = InverterStatusCode::DISCONNECTED;
+  InverterErrorCode inverterError = InverterErrorCode::NOERROR;
   std::shared_ptr<std::shared_mutex> dataMutex;
 };
 
@@ -89,23 +100,25 @@ struct ConnectionCheckerConfig {
   /* for checking connection */
   int minGoodAccessThreshold;
   float minGoodSeconds;
+
+  ConnectionCheckerConfig(int minBadAccess = 4, float minBadSeconds = 2.0, int minGoodAccess = 4, float minGoodSeconds = 2.0)
+                          :minBadAccessThreshold(minBadAccess), minBadSeconds(minBadSeconds), minGoodAccessThreshold(minGoodAccess), minGoodSeconds(minGoodSeconds)
+                          {}
 };
 /**
  * @brief checks if the associated device is connected, for example:
  *        - if a modbus access was wrong, register the wrong read, measure the elapsed time between the first bad access and
  *        the occurences of bad accesses, devices are disconnected according to this:
  *          - if both min thresholds are reached
- *          - if one of the max threshold is reached
  *        - devices are counted as connected if:
  *          - there was a minium amount of good accesses and the the time from the first good access above the minimum good access threshold
- *          - there was a maximum amount of good accesses
  * 
  */
 class DeviceConnectionChecker
 {
 public:
-  DeviceConnectionChecker(const ConnectionCheckerConfig& config) : m_config(config){}
-  const DeviceConnection IsConnected() const {return m_connection;}
+  DeviceConnectionChecker(const ConnectionCheckerConfig& config = ConnectionCheckerConfig()) : m_config(config){}
+  const DeviceConnection GetConnState() const {return m_connection;}
   /**
    * @brief updates the elapsed time
    * 
@@ -127,21 +140,23 @@ class BaseDevice
 protected:
   std::string m_assetId;
   Devicetype m_type;
+  DeviceConnectionChecker m_connChecker;
 public:
-  BaseDevice() : m_assetId("") {}
+  BaseDevice(const DeviceConnectionChecker& checker) : m_assetId(""), m_connChecker(checker) {}
   virtual int ReadMeasurements() = 0;
   virtual void SetAssetId(std::string assetId){m_assetId = assetId;}
-  const std::string GetAssetId(){return m_assetId;}
+  const std::string GetAssetId() const {return m_assetId;}
+  const DeviceConnection GetConnState() const {return m_connChecker.GetConnState();}
 };
 
 class PowerMeterDevice : public BaseDevice {
 protected:
   PowerMeterData m_data;
 public:
-  PowerMeterDevice() {m_type = Devicetype::powerMeter;}
+  PowerMeterDevice(const DeviceConnectionChecker& checker) :BaseDevice(checker) {m_type = Devicetype::powerMeter;}
   virtual int Initialize(const json& config) = 0;
   virtual int ReadMeasurements() override {};
-  virtual PowerMeterData GetPowerMeterData() {return m_data;};
+  virtual PowerMeterData GetPowerMeterData() const {return m_data;};
   virtual void SetDataMutex(std::shared_ptr<std::shared_mutex> mutex){m_data.dataMutex = mutex;}
 };
 
@@ -172,7 +187,7 @@ private:
   std::shared_ptr<ModbusPort> m_commPort;
   int m_address;
 public:
-  SchneiderPM5110Meter(){m_type = Devicetype::powerMeter;}
+  SchneiderPM5110Meter(const DeviceConnectionChecker& checker = DeviceConnectionChecker()) : PowerMeterDevice(checker){m_type = Devicetype::powerMeter;}
   virtual int Initialize(const json& config) override;
   virtual int ReadMeasurements() override;
   virtual PowerMeterData GetPowerMeterData() {return m_data;}
@@ -184,11 +199,11 @@ class InverterDevice : public BaseDevice {
 protected:
   InverterData m_data;
 public:
-  InverterDevice() {m_type = Devicetype::inverter;}
+  InverterDevice(const DeviceConnectionChecker& checker) : BaseDevice(checker){m_type = Devicetype::inverter;}
 
   virtual int Initialize(const json& config) = 0;
   virtual int ReadMeasurements() override {return 0;};
-  virtual InverterData GetInverterData()
+  const InverterData GetInverterData()
   {
     InverterData data;
     m_data.dataMutex->lock_shared();
@@ -196,6 +211,8 @@ public:
     m_data.dataMutex->unlock_shared();
     return data;
   }
+  static const std::string ParseErrorCode(const InverterErrorCode& errorCode);
+  static const std::string ParseStatusCode(const InverterStatusCode& statusCode);
   virtual void UpdatePower(float powerSetpoint) = 0;
   virtual void SetDataMutex(std::shared_ptr<std::shared_mutex> mutex){m_data.dataMutex = mutex;}
 };
@@ -214,7 +231,7 @@ private:
   static constexpr int dcValues1Base = 40272;
   static constexpr int dcValues2Base = 40292;
 public:
-  FroniusIgPlus(){}
+  FroniusIgPlus(const DeviceConnectionChecker& checker = DeviceConnectionChecker()) : InverterDevice(checker){}
   virtual int Initialize(const json& config) override;
   virtual int ReadMeasurements() override;
   virtual void UpdatePower(float powerSetpoint) override;
@@ -235,7 +252,7 @@ private:
   static constexpr int statusMeasurementRegBase = 191;
   static constexpr int waterTemperatureBase = 206;
 public:
-  Tesla(){}
+  Tesla(const DeviceConnectionChecker& checker = DeviceConnectionChecker()) : InverterDevice(checker){}
   virtual int Initialize(const json& config) override;
   virtual int ReadMeasurements() override;
   virtual void UpdatePower(float powerSetpoint) override;
@@ -269,8 +286,8 @@ public:
 
   bool ContainsPowerMeterDevice(const std::string& assetId);
   bool ContainsInverterDevice(const std::string& assetId);
-  const PowerMeterData GetPowerMeterDeviceData(const std::string& assetId);
-  const InverterData GetInverterDeviceData(const std::string& assetId);
+  const PowerMeterData GetPowerMeterDeviceData(const std::string& assetId) const;
+  const InverterData GetInverterDeviceData(const std::string& assetId) const ;
 };
 
 template<int (PowerMeterDevice::*functor)()>

@@ -422,8 +422,8 @@ void CatchpennyModbusTcpServer::UpdateRegisters()
   {
     /* status registers update */
     /* TODO: revisit those status and error registers */
-    Modbus::Data<uint32_t> inverterStatusData[4] = {dischargerData[0].inverterStatus,dischargerData[0].inverterError,chargerData[0].inverterStatus,chargerData[0].inverterError};
-    m_bufferSlave->writeInputRegisters(DISCHARGING_INVERTER_STAT_REG, inverterStatusData, 4);
+    //Modbus::Data<uint32_t> inverterStatusData[4] = {dischargerData[0].inverterStatus,dischargerData[0].inverterError,chargerData[0].inverterStatus,chargerData[0].inverterError};
+    //m_bufferSlave->writeInputRegisters(DISCHARGING_INVERTER_STAT_REG, inverterStatusData, 4);
     
     /* update inverter data registers */
     /* TODO: check concurrency */

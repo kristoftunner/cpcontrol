@@ -1,9 +1,9 @@
-## Dependecies, prerequisites:
+# Dependecies, prerequisites:
 - build paho.mqtt.cpp from source: https://github.com/eclipse/paho.mqtt.cpp
 - build and install libmodbus: https://github.com/stephane/libmodbus
 - build and install libmodbuspp: https://github.com/epsilonrt/libmodbuspp
 
-## Json configuration input example:
+# Json configuration input example:
 ``` json
 {
   "commPorts" : [
@@ -56,9 +56,39 @@
 }
 ```
 
+# Status and error codes:
 ## Inverter status and error codes:
-### Status codes:
-### Error codes:
+Inverter status events are a combination of the connection status checked by ```DeviceConnectionChecker``` class and the actual state of the specific inverter and this rule is applied to the error as well
+- status:
+  - CONNECTED_IDLE
+  - CONNECTED_THROTTLED
+  - DISCONNECTED
+- error:
+  - DISCONNECTED_BUS_ERROR
+## Powermeter status and error codes:
+- status:
+  - CONNECTED
+  - DISCONNECTED
+error:
+  - DISCONNECTED_BUS_ERROR
+## Battery status and error codes:
+- status:
+  - CONNECTED_OK
+  - CONNECTED_ERROR
+  - DISCONNECTED
+- error:
+  - OVERVOLTAGE_ERROR
+  - OVERTEMPERATURE_ERROR
+  - UNDERVOLTAGE_ERROR
+  - UNDERTEMPERATURE_ERROR
+## Catchpenny status and error codes:
+- status:
+  - IDLE
+  - CHARGIN
+  - DISCHARGING
+  - HALTED_ON_ERROR
+- error:
+  - various battery errors
 ## Feature backlog:
 - Parse the system information from a config file(ini?) and do not hardcode those informations
 - this ```assetId``` thing should be resolved: how to fill all the devices assetId, how to use it in the code 

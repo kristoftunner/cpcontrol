@@ -1,5 +1,59 @@
 #include "device.hpp"
 
+const std::string InverterDevice::ParseErrorCode(const InverterErrorCode& errorCode)
+{
+  std::string ret;
+  switch(errorCode)
+  {
+    case InverterErrorCode::NOERROR:
+    {
+      ret = "NOERROR";
+      break;
+    }
+    case InverterErrorCode::DISCONNECTED_BUS_ERROR:
+    {
+      ret = "DISCONNECTED_BUS_ERROR";
+      break;
+    }
+    case InverterErrorCode::OVERHEATED:
+    {
+      ret = "OVERHEATED";
+      break;
+    }
+    default:
+    {
+      ret = "";
+      break;
+    }
+  }
+
+  return ret;
+}
+
+const std::string InverterDevice::ParseStatusCode(const InverterStatusCode& statusCode)
+{
+  std::string ret;
+  switch(statusCode)
+  {
+    case InverterStatusCode::CONNECTED_IDLE:
+    {
+      ret = "CONNECTED_IDLE";
+      break;
+    }
+    case InverterStatusCode::CONNECTED_THROTTLED:
+    {
+      ret = "CONNECTED_THROTTLED";
+      break;
+    }
+    case InverterStatusCode::DISCONNECTED:
+    {
+      ret = "DISCONNECTED";
+      break;
+    }
+  }
+
+  return ret;
+}
 int SchneiderPM5110Meter::Initialize(const json& config) 
 {
   m_address = config.at("address").get<int>();
@@ -11,6 +65,7 @@ int SchneiderPM5110Meter::ReadMeasurements()
   std::vector<float> currentValues = m_commPort->ReadHoldingRegister<float>(currentPhase1Reg,3,m_address);
   if(currentValues.size() != 3)
   {
+    m_connChecker.OnDevicesAccess(false);
     //const Error error = {ErrorType::ERROR_MODBUS_READ, ErrorSeverityLevel::ERROR_WARNING};
     //m_et->PushBackError(error);
     return 1;
@@ -25,6 +80,7 @@ int SchneiderPM5110Meter::ReadMeasurements()
   std::vector<float> voltageValues = m_commPort->ReadHoldingRegister<float>(voltagePhase1Reg,3,m_address);
   if(voltageValues.size() != 3)
   {
+    m_connChecker.OnDevicesAccess(false);
     //const Error error = {ErrorType::ERROR_MODBUS_READ, ErrorSeverityLevel::ERROR_WARNING};
     //m_et->PushBackError(error);
     return 1;
@@ -39,6 +95,7 @@ int SchneiderPM5110Meter::ReadMeasurements()
   std::vector<float> powerValues = m_commPort->ReadHoldingRegister<float>(powerAcPhase1Reg,12,m_address);
   if(powerValues.size() != 12)
   {
+    m_connChecker.OnDevicesAccess(false);
     //const Error error = {ErrorType::ERROR_MODBUS_READ, ErrorSeverityLevel::ERROR_WARNING};
     //m_et->PushBackError(error);
     return 1;
@@ -204,8 +261,8 @@ int Tesla::ReadMeasurements()
     m_data.powerAcPhase1 = m_data.voltageAcPhase1 * m_data.currentAcPhase1 * pow(3,0.5); 
     m_data.powerAcTotal = m_data.powerAcPhase1 + m_data.powerAcPhase2 + m_data.powerAcPhase3;
     m_data.powerFactor = m_data.powerAcTotal / (m_data.currentDc * m_data.voltageDc);
-    m_data.inverterError = 0;
-    m_data.inverterStatus = 0; /* TODO: revisit this status thing */
+    //m_data.inverterError = 0;
+    //m_data.inverterStatus = 0; /* TODO: revisit this status thing */
     return 0;
   }
 } 
@@ -248,7 +305,7 @@ bool DeviceContainer::ContainsInverterDevice(const std::string& assetId)
   return false;
 }
 
-const PowerMeterData DeviceContainer::GetPowerMeterDeviceData(const std::string& assetId)
+const PowerMeterData DeviceContainer::GetPowerMeterDeviceData(const std::string& assetId) const 
 {
   for(const auto device : m_powerMeterContainer)
   {
@@ -259,7 +316,7 @@ const PowerMeterData DeviceContainer::GetPowerMeterDeviceData(const std::string&
   return data;
 }
 
-const InverterData DeviceContainer::GetInverterDeviceData(const std::string& assetId)
+const InverterData DeviceContainer::GetInverterDeviceData(const std::string& assetId) const 
 {
   for(const auto device : m_inverterContainer)
   {

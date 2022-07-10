@@ -11,7 +11,8 @@ namespace catchpenny_config{
   static const std::vector<std::string> subrscribeTopics = {
     "GetSystemInfo",
     "GetConfigInfo",
-    "StatusUpdate",
+    "GetStatusUpdate",
+    "GetCatchpennyDevices",
     "GetChargerData",
     "GetDischargerData",
     "GetBatteryData",
@@ -19,7 +20,7 @@ namespace catchpenny_config{
     "PowerRequest",
     "GetPowerMeterData",
     "GetInverterData",
-    "GetStatusUpdate"
+    "GetManagedDevices"
   };
   
   static constexpr int circularBuffersize = 256;

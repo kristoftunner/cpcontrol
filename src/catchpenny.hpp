@@ -43,6 +43,7 @@ struct Cell {
 };
 
 struct BatteryPackMetaData {
+  std::string deviceType = "cona";
   float minCellVoltage = 0;
   float maxCellVoltage = 0;
   float averageCellVoltage = 0;
@@ -72,9 +73,12 @@ private:
   int m_address;
   float m_batteryCapacity;
   CellConfig m_cellConfig;
+  DeviceConnectionChecker m_checker;
 public:
-  Battery(float batteryCapacity, int cellNumber, CellConfig cellConfig, int address) : m_cellConfig(cellConfig), m_batteryCapacity(batteryCapacity), m_address(address)
+  Battery(const float batteryCapacity, const int cellNumber, const CellConfig cellConfig, const int address, const DeviceConnectionChecker& checker = DeviceConnectionChecker()) 
+          : m_cellConfig(cellConfig), m_batteryCapacity(batteryCapacity), m_address(address), m_checker(checker)
   {m_cells.resize(cellNumber);}
+
   bool CheckOverVoltage();
   bool CheckUnderVoltage();
   bool CheckOverTemperature();
@@ -86,7 +90,9 @@ public:
   float GetAvailableChargeStorage();    // in kWh
   float GetAvailableDischargeStorage(); // in kWh
   const BatteryPackMetaData GetBatterMetaData();
-  CellConfig GetCellConfig(){return m_cellConfig;}
+  CellConfig GetCellConfig() const {return m_cellConfig;}
+  const DeviceConnection GetConnState() const {return m_checker.GetConnState();}
+
   void SetCommPort(std::shared_ptr<ModbusPort> commPort){m_commPort = commPort;};
   void SetDataMutex(std::shared_ptr<std::shared_mutex> mutex){m_data.dataMutex = mutex;}
 
@@ -127,16 +133,21 @@ public:
   void SafetyShutDown();
 
   /* Getter functions for the datastructures */
-  InverterData GetChargerData(int chargerNumber){return m_chargers[chargerNumber]->GetInverterData();};
-  InverterData GetDischargerData(int dischargerNumber){return m_dischargers[dischargerNumber]->GetInverterData();}
-  BatteryPackMetaData GetBatteryData(int batteryNumber){return m_battery[batteryNumber].GetBatterMetaData();}
+  const InverterData GetChargerData(int chargerNumber) {return m_chargers[chargerNumber]->GetInverterData();};
+  const InverterData GetDischargerData(int dischargerNumber) {return m_dischargers[dischargerNumber]->GetInverterData();}
+  const BatteryPackMetaData GetBatteryData(int batteryNumber) {return m_battery[batteryNumber].GetBatterMetaData();}
+
   int GetNumberOfChargers(){return m_chargers.size();}
   int GetNumberOfDischargers(){return m_dischargers.size();}
   int GetNumberOfBatteries(){return m_battery.size();}
+
+  const DeviceConnection GetChargerConnState(int chargerNumber) const {return m_chargers[chargerNumber]->GetConnState();}
+  const DeviceConnection GetDischargerConnState(int dischargerNumber) const {return m_dischargers[dischargerNumber]->GetConnState();}
+  const DeviceConnection GetBatteryConnState(int batteryNumber) const {return m_battery[batteryNumber].GetConnState();}
   CellConfig GetBatteryCellConfig(int batteryNumber){return m_battery[batteryNumber].GetCellConfig();}
   const SystemInfo GetSystemInfo()const {return m_systemInfo;}
   const CatchpennyConfig& GetCpConfig(){return m_config;}
-  CatchpennyState GetState(){return m_state;}
+  const CatchpennyState GetState(){return m_state;}
 };
 
 /**

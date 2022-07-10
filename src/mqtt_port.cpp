@@ -138,6 +138,38 @@ std::vector<MqttMessage> MqttMessageResponder::ActOnMessage(const MqttMessage& m
   {
     /* TODO: implement this message with the error tracker */
   }
+  else if(message.topic == "GetCatchpennyDevices")
+  {
+    /* get the data, parse the error and status code into the json message */
+    const int numberOfChargers = m_catchpenny->GetNumberOfChargers();
+    const int numberOfDischargers = m_catchpenny->GetNumberOfDischargers();
+    const int numberOfBatteries = m_catchpenny->GetNumberOfBatteries();
+    json responseMessage = {{"id",0}};
+    json chargerArray = json::array();
+    json dischargerArray = json::array();
+    json batteryArray = json::array();
+    for(int i = 0; i < numberOfChargers; i++)
+    {
+      const InverterData data = m_catchpenny->GetChargerData(i);
+      const std::string status = InverterDevice::ParseStatusCode(data.inverterStatus);
+      json singleCharger = {{"id", i}, {"model", data.deviceType}, {"status", status}};
+      chargerArray.emplace_back(singleCharger);
+    }
+    for(int i = 0; i < numberOfDischargers; i++)
+    {
+      const InverterData data = m_catchpenny->GetDischargerData(i);
+      const std::string status = InverterDevice::ParseStatusCode(data.inverterStatus);
+      json singleDischarger = {{"id", i}, {"model", data.deviceType}, {"status", status}};
+      dischargerArray.emplace_back(singleDischarger);
+    }
+    for(int i = 0; i < numberOfBatteries; i++)
+    {
+      const BatteryPackMetaData data = m_catchpenny->GetBatteryData();
+      json singleBattery = {{"id", i}, {"model", data.deviceType}, {"status", status}};
+      chargerArray.emplace_back(singleCharger);
+    }
+  
+  }
   else if(message.topic == "PowerRequest")
   {
     const float power = message.message.at("power").get<float>();
