@@ -35,9 +35,9 @@ EnermanReturnCode Enerman::BuildDevices(const json& devicesConfig)
         const auto& assetId = powerMeter.at("assetId").get<std::string>();
         device->SetAssetId(assetId);
         //device->SetErrorTracker(m_et);
-        if(m_modbusCommPortMap.contains(commPort))
+        if(const auto port = m_modbusCommPortMap.find(commPort) != m_modbusCommPortMap.end())
         {
-          device->SetCommPort(m_modbusCommPortMap[commPort]);
+          device->SetCommPort(m_modbusCommPortMap[port.second]);
         }
         else
         {
